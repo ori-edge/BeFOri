@@ -4,6 +4,7 @@ import ray
 import torch
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 import json
+import ipdb
 import os
 import time
 from typing import Any, Dict, Tuple
@@ -30,7 +31,7 @@ class Llama2LLMClient(LLMClient):
 
         """
         max_length = 2048
-        # access_token = "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"
+
         access_token = os.environ.get("HF_ACCESS_TOKEN")
         model = "meta-llama/Llama-2-7b-chat-hf"
         tokenizer = AutoTokenizer.from_pretrained(model, token=access_token)
@@ -63,6 +64,7 @@ class Llama2LLMClient(LLMClient):
 
             # Generate one token at a time
             for i in range(max_length):
+                breakpoint()
                 start_time = time.monotonic()
                 with torch.no_grad():
                     outputs = model(input_ids=input_ids)
