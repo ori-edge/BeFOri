@@ -8,7 +8,7 @@ from llmperf.ray_clients.vertexai_client import VertexAIClient
 from llmperf.ray_llm_client import LLMClient
 
 
-SUPPORTED_APIS = ["openai", "anthropic", "litellm"]
+SUPPORTED_APIS = ["openai", "anthropic", "litellm", "llama2"]
 
 
 def construct_clients(llm_api: str, num_clients: int) -> List[LLMClient]:
