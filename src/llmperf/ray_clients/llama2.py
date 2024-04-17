@@ -21,7 +21,7 @@ from llmperf import common_metrics
 class Llama2LLMClient(LLMClient):
     """Client for Llama2 Chat Completions"""
 
-    def llm_request(self, request_config: RequestConfig) -> Tuple[Metrics, str, RequestConfig]:
+    def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         """Make a single completion request to a LLM API
 
         Returns:
