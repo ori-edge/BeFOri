@@ -61,49 +61,35 @@ class Llama2LLMClient(LLMClient):
             input_ids = tokenizer.encode(prompt, return_tensors="pt")
             # Set model to evaluation mode
             model.eval()
+            ttft_start_time = time.monotonic()
+            with torch.no_grad():
+                outputs = model(input_ids=input_ids)
+                logits = outputs.logits[:, -1, :]
+                next_token_id = torch.argmax(logits, dim=-1)
 
-            # Generate one token at a time
-            for i in range(max_length):
-                breakpoint()
-                start_time = time.monotonic()
-                with torch.no_grad():
-                    outputs = model(input_ids=input_ids)
-                    logits = outputs.logits[:, -1, :]
-                    next_token_id = torch.argmax(logits, dim=-1)
+            ttft = time.monotonic() - ttft_start_time
 
-                # Append the generated token to the input for next step
-                input_ids = torch.cat([input_ids, next_token_id.unsqueeze(1)], dim=-1)
+            # Generate the full response
+            start_time = time.monotonic()
+            with torch.no_grad():
+                outputs = model.generate(input_ids, max_length=max_length, pad_token_id=tokenizer.eos_token_id)
+            generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-                # Decode the token and print
-                next_token = tokenizer.decode(next_token_id)
-                print(next_token, end="", flush=True)
-                tokens_received += 1
-
-                if not ttft:
-                    ttft = time.monotonic() - start_time
-                    time_to_next_token.append(ttft)
-                else:
-                    time_to_next_token.append(
-                        time.monotonic() - most_recent_received_token_time
-                    )
-                most_recent_received_token_time = time.monotonic()
-                generated_text += next_token
-                # If the generated token is an end-of-text token, break
-                if next_token == tokenizer.eos_token:
-                    break
             total_request_time = time.monotonic() - start_time
+            tokens_received = outputs.shape[1]
             output_throughput = tokens_received / total_request_time
+
         except Exception as e:
             metrics[common_metrics.ERROR_MSG] = str(e)
             print(f"Warning Or Error: {e}")
 
-        metrics[common_metrics.INTER_TOKEN_LAT] = sum(time_to_next_token)  # This should be same as metrics[common_metrics.E2E_LAT]. Leave it here for now
-        metrics[common_metrics.TTFT] = ttft
-        metrics[common_metrics.E2E_LAT] = total_request_time
-        metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput
-        metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
-        metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
-        metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
+        metrics["INTER_TOKEN_LAT"] = (total_request_time - ttft) / tokens_received
+        metrics["TTFT"] = ttft
+        metrics["E2E_LAT"] = total_request_time
+        metrics["REQ_OUTPUT_THROUGHPUT"] = output_throughput
+        metrics["NUM_TOTAL_TOKENS"] = tokens_received + prompt_len
+        metrics["NUM_OUTPUT_TOKENS"] = tokens_received
+        metrics["NUM_INPUT_TOKENS"] = prompt_len
 
         return metrics, generated_text, request_config
 
