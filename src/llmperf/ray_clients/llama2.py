@@ -48,8 +48,6 @@ class Llama2LLMClient(LLMClient):
             ttft_start_time = time.monotonic()
             with torch.no_grad():
                 outputs = model(input_ids=input_ids)
-                logits = outputs.logits[:, -1, :]
-
             ttft = time.monotonic() - ttft_start_time
 
             # Generate the full response
@@ -66,13 +64,13 @@ class Llama2LLMClient(LLMClient):
             metrics[common_metrics.ERROR_MSG] = str(e)
             print(f"Warning Or Error: {e}")
 
-        metrics["INTER_TOKEN_LAT"] = (total_request_time - ttft) / tokens_received
-        metrics["TTFT"] = ttft
-        metrics["E2E_LAT"] = total_request_time
-        metrics["REQ_OUTPUT_THROUGHPUT"] = output_throughput
-        metrics["NUM_TOTAL_TOKENS"] = tokens_received + prompt_len
-        metrics["NUM_OUTPUT_TOKENS"] = tokens_received
-        metrics["NUM_INPUT_TOKENS"] = prompt_len
+        metrics[common_metrics.INTER_TOKEN_LAT] = (total_request_time - ttft) / tokens_received
+        metrics[common_metrics.TTFT] = ttft
+        metrics[common_metrics.E2E_LAT] = total_request_time
+        metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput
+        metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
+        metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
+        metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
 
         return metrics, generated_text, request_config
 
