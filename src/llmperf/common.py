@@ -29,10 +29,10 @@ def construct_clients(llm_api: str, num_clients: int) -> List[LLMClient]:
         clients = [SageMakerClient.remote() for _ in range(num_clients)]
     elif llm_api == "vertexai":
         clients = [VertexAIClient.remote() for _ in range(num_clients)]
-    elif llm_api in SUPPORTED_APIS:
-        clients = [LiteLLMClient.remote() for _ in range(num_clients)]
     elif llm_api == 'llama2':
         clients = [Llama2LLMClient.remote() for _ in range(num_clients)]
+    elif llm_api in SUPPORTED_APIS:
+        clients = [LiteLLMClient.remote() for _ in range(num_clients)]
     else:
         raise ValueError(
             f"llm_api must be one of the supported LLM APIs: {SUPPORTED_APIS}"
