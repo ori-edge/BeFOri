@@ -1,16 +1,9 @@
-
-from llmperf.ray_llm_client import LLMClient
-import ray
 import torch
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
-import json
-import ipdb
 import os
 import time
-from typing import Any, Dict, Tuple
-
+from typing import Any, Dict
 import ray
-import requests
 
 from llmperf.ray_llm_client import LLMClient
 from llmperf.models import RequestConfig
@@ -36,26 +29,17 @@ class Llama2LLMClient(LLMClient):
         model = "meta-llama/Llama-2-7b-chat-hf"
         tokenizer = AutoTokenizer.from_pretrained(model, token=access_token)
         model = AutoModelForCausalLM.from_pretrained(model, token=access_token)
-        llama_pipeline = pipeline("text-generation", model=model, torch_dtype=torch.float16, device_map="auto", tokenizer=tokenizer)
 
         prompt = request_config.prompt
         prompt, prompt_len = prompt
 
-        time_to_next_token = []
         tokens_received = 0
         ttft = 0
         generated_text = ""
-        error_msg = ""
-        # output_throughput = 0
-        # total_request_time = 0
-
         metrics = {}
 
         metrics[common_metrics.ERROR_CODE] = None
         metrics[common_metrics.ERROR_MSG] = ""
-
-
-        most_recent_received_token_time = time.monotonic()
 
         try:
             input_ids = tokenizer.encode(prompt, return_tensors="pt")
@@ -65,7 +49,6 @@ class Llama2LLMClient(LLMClient):
             with torch.no_grad():
                 outputs = model(input_ids=input_ids)
                 logits = outputs.logits[:, -1, :]
-                next_token_id = torch.argmax(logits, dim=-1)
 
             ttft = time.monotonic() - ttft_start_time
 
