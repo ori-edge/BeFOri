@@ -53,7 +53,11 @@ class Llama2LLMClient(LLMClient):
             # Generate the full response
             start_time = time.monotonic()
             with torch.no_grad():
-                outputs = model.generate(input_ids, max_length=max_length, pad_token_id=tokenizer.eos_token_id)
+                outputs = model.generate(
+                    input_ids,
+                    max_length=max_length,
+                    pad_token_id=tokenizer.eos_token_id,
+                )
             generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
             total_request_time = time.monotonic() - start_time
@@ -64,7 +68,9 @@ class Llama2LLMClient(LLMClient):
             metrics[common_metrics.ERROR_MSG] = str(e)
             print(f"Warning Or Error: {e}")
 
-        metrics[common_metrics.INTER_TOKEN_LAT] = (total_request_time - ttft) / tokens_received
+        metrics[common_metrics.INTER_TOKEN_LAT] = (
+            total_request_time - ttft
+        ) / tokens_received
         metrics[common_metrics.TTFT] = ttft
         metrics[common_metrics.E2E_LAT] = total_request_time
         metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput
@@ -73,4 +79,3 @@ class Llama2LLMClient(LLMClient):
         metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
 
         return metrics, generated_text, request_config
-
