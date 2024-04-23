@@ -13,6 +13,10 @@ from llmperf import common_metrics
 @ray.remote
 class Llama2LLMClient(LLMClient):
     """Client for Llama2 Chat Completions"""
+    def __init__(self):
+        self.access_token = os.environ.get("HF_ACCESS_TOKEN")
+        self.model = None
+        self.tokenizer = None
 
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         """Make a single completion request to a LLM API
@@ -23,59 +27,54 @@ class Llama2LLMClient(LLMClient):
             The request_config used to make the request. This is mainly for logging purposes.
 
         """
-        max_length = 2048
+        # Load the model and tokenizer once and reuse them
+        if self.model is None:
+            self.model = AutoModelForCausalLM.from_pretrained(request_config.model, token=self.access_token)
+            # Set model to evaluation mode
+            self.model.eval()
+        if self.tokenizer is None:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model, token=self.access_token)
 
-        access_token = os.environ.get("HF_ACCESS_TOKEN")
-        model = "meta-llama/Llama-2-7b-chat-hf"
-        tokenizer = AutoTokenizer.from_pretrained(model, token=access_token)
-        model = AutoModelForCausalLM.from_pretrained(model, token=access_token)
-
+        max_length = request_config.sampling_params['max_tokens']
         prompt = request_config.prompt
         prompt, prompt_len = prompt
 
         tokens_received = 0
         ttft = 0
         generated_text = ""
-        metrics = {}
-
-        metrics[common_metrics.ERROR_CODE] = None
-        metrics[common_metrics.ERROR_MSG] = ""
+        metrics = {common_metrics.ERROR_CODE: None, common_metrics.ERROR_MSG: ""}
 
         try:
-            input_ids = tokenizer.encode(prompt, return_tensors="pt")
-            # Set model to evaluation mode
-            model.eval()
+            input_ids = self.tokenizer(prompt, return_tensors="pt")
+
             ttft_start_time = time.monotonic()
             with torch.no_grad():
-                outputs = model(input_ids=input_ids)
+                outputs = self.model.generate(inputs=input_ids, max_length=max_length, max_new_tokens=1)
+            first_token = self.tokenizer.decode(outputs[0][-1], skip_special_tokens=True)
             ttft = time.monotonic() - ttft_start_time
 
             # Generate the full response
             start_time = time.monotonic()
             with torch.no_grad():
-                outputs = model.generate(
-                    input_ids,
-                    max_length=max_length,
-                    pad_token_id=tokenizer.eos_token_id,
-                )
-            generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+                outputs = self.model.generate(inputs=input_ids, max_length=max_length)
+            generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
+            # Calculate metrics
             total_request_time = time.monotonic() - start_time
             tokens_received = outputs.shape[1]
             output_throughput = tokens_received / total_request_time
+            metrics[common_metrics.INTER_TOKEN_LAT] = (
+                total_request_time - ttft
+            ) / tokens_received
+            metrics[common_metrics.TTFT] = ttft
+            metrics[common_metrics.E2E_LAT] = total_request_time
+            metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput
+            metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
+            metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
+            metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
 
         except Exception as e:
             metrics[common_metrics.ERROR_MSG] = str(e)
             print(f"Warning Or Error: {e}")
-
-        metrics[common_metrics.INTER_TOKEN_LAT] = (
-            total_request_time - ttft
-        ) / tokens_received
-        metrics[common_metrics.TTFT] = ttft
-        metrics[common_metrics.E2E_LAT] = total_request_time
-        metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput
-        metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
-        metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
-        metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
 
         return metrics, generated_text, request_config
