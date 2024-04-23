@@ -33,7 +33,7 @@ class Llama2LLMClient(LLMClient):
             # Set model to evaluation mode
             self.model.eval()
         if self.tokenizer is None:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model, token=self.access_token)
+            self.tokenizer = AutoTokenizer.from_pretrained(request_config.model, token=self.access_token)
 
         max_length = request_config.sampling_params['max_tokens']
         prompt = request_config.prompt
