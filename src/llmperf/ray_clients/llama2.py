@@ -42,15 +42,19 @@ class Llama2LLMClient(LLMClient):
         tokens_received = 0
         ttft = 0
         generated_text = ""
-        metrics = {common_metrics.ERROR_CODE: None, common_metrics.ERROR_MSG: ""}
+        metrics = {}
+
+        metrics[common_metrics.ERROR_CODE] = None
+        metrics[common_metrics.ERROR_MSG] = ""
 
         try:
-            input_ids = self.tokenizer(prompt, return_tensors="pt")
+            input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
 
             ttft_start_time = time.monotonic()
             with torch.no_grad():
                 outputs = self.model.generate(inputs=input_ids, max_length=max_length, max_new_tokens=1)
             first_token = self.tokenizer.decode(outputs[0][-1], skip_special_tokens=True)
+            breakpoint()
             ttft = time.monotonic() - ttft_start_time
 
             # Generate the full response
@@ -59,22 +63,22 @@ class Llama2LLMClient(LLMClient):
                 outputs = self.model.generate(inputs=input_ids, max_length=max_length)
             generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-            # Calculate metrics
             total_request_time = time.monotonic() - start_time
             tokens_received = outputs.shape[1]
             output_throughput = tokens_received / total_request_time
-            metrics[common_metrics.INTER_TOKEN_LAT] = (
-                total_request_time - ttft
-            ) / tokens_received
-            metrics[common_metrics.TTFT] = ttft
-            metrics[common_metrics.E2E_LAT] = total_request_time
-            metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput
-            metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
-            metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
-            metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
 
         except Exception as e:
             metrics[common_metrics.ERROR_MSG] = str(e)
             print(f"Warning Or Error: {e}")
 
+        metrics[common_metrics.INTER_TOKEN_LAT] = (
+            total_request_time - ttft
+        ) / tokens_received
+        metrics[common_metrics.TTFT] = ttft
+        metrics[common_metrics.E2E_LAT] = total_request_time
+        metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = output_throughput
+        metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
+        metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
+        metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
+        breakpoint()
         return metrics, generated_text, request_config
