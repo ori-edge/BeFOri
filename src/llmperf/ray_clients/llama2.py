@@ -13,6 +13,7 @@ from llmperf import common_metrics
 @ray.remote
 class Llama2LLMClient(LLMClient):
     """Client for Llama2 Chat Completions"""
+
     def __init__(self):
         self.access_token = os.environ.get("HF_ACCESS_TOKEN")
         self.model = None
@@ -29,13 +30,17 @@ class Llama2LLMClient(LLMClient):
         """
         # Load the model and tokenizer once and reuse them
         if self.model is None:
-            self.model = AutoModelForCausalLM.from_pretrained(request_config.model, token=self.access_token)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                request_config.model, token=self.access_token
+            )
             # Set model to evaluation mode
             self.model.eval()
         if self.tokenizer is None:
-            self.tokenizer = AutoTokenizer.from_pretrained(request_config.model, token=self.access_token)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                request_config.model, token=self.access_token
+            )
 
-        max_length = request_config.sampling_params['max_tokens']
+        max_length = request_config.sampling_params["max_tokens"]
         prompt = request_config.prompt
         prompt, prompt_len = prompt
 
@@ -52,9 +57,10 @@ class Llama2LLMClient(LLMClient):
 
             ttft_start_time = time.monotonic()
             with torch.no_grad():
-                outputs = self.model.generate(inputs=input_ids, max_length=max_length, max_new_tokens=1)
-            first_token = self.tokenizer.decode(outputs[0][-1], skip_special_tokens=True)
-            breakpoint()
+                outputs = self.model.generate(inputs=input_ids, max_new_tokens=1)
+            first_token = self.tokenizer.decode(
+                outputs[0][-1], skip_special_tokens=True
+            )
             ttft = time.monotonic() - ttft_start_time
 
             # Generate the full response
@@ -80,5 +86,5 @@ class Llama2LLMClient(LLMClient):
         metrics[common_metrics.NUM_TOTAL_TOKENS] = tokens_received + prompt_len
         metrics[common_metrics.NUM_OUTPUT_TOKENS] = tokens_received
         metrics[common_metrics.NUM_INPUT_TOKENS] = prompt_len
-        breakpoint()
+
         return metrics, generated_text, request_config
