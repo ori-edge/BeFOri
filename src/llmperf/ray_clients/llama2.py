@@ -11,7 +11,7 @@ from llmperf import common_metrics
 
 
 @ray.remote
-class Llama2LLMClient(LLMClient):
+class LlamaLLMClient(LLMClient):
     """Client for Llama2 Chat Completions"""
 
     def __init__(self):
