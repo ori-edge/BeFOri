@@ -1,6 +1,6 @@
 from typing import List
 from llmperf.ray_clients.litellm_client import LiteLLMClient
-from llmperf.ray_clients.llama2 import LlamaLLMClient
+from llmperf.ray_clients.llama import LlamaLLMClient
 from llmperf.ray_clients.openai_chat_completions_client import (
     OpenAIChatCompletionsClient,
 )
