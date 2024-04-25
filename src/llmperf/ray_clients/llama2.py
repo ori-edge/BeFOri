@@ -57,7 +57,11 @@ class LlamaLLMClient(LLMClient):
 
             ttft_start_time = time.monotonic()
             with torch.no_grad():
-                outputs = self.model.generate(inputs=input_ids, max_new_tokens=1)
+                outputs = self.model.generate(
+                    inputs=input_ids,
+                    max_new_tokens=1,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                )
             first_token = self.tokenizer.decode(
                 outputs[0][-1], skip_special_tokens=True
             )
@@ -66,7 +70,11 @@ class LlamaLLMClient(LLMClient):
             # Generate the full response
             start_time = time.monotonic()
             with torch.no_grad():
-                outputs = self.model.generate(inputs=input_ids, max_length=max_length)
+                outputs = self.model.generate(
+                    inputs=input_ids,
+                    max_length=max_length,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                )
             generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
             total_request_time = time.monotonic() - start_time
