@@ -500,7 +500,7 @@ if __name__ == "__main__":
         for key in parameter_defaults.keys():
             if key not in conf:
                 conf[key] = parameter_defaults[key]
-        breakpoint()
+        print(f"Running new benchmark \n {conf}")
         run_token_benchmark(
             **conf
         )
