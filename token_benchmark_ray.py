@@ -7,6 +7,7 @@ import re
 import time
 import random
 from typing import Any, Dict, List, Optional, Tuple
+import yaml
 
 import pandas as pd
 import ray
@@ -24,19 +25,20 @@ from llmperf.utils import (
 from tqdm import tqdm
 
 from transformers import LlamaTokenizerFast
+from yaml import FullLoader
 
 
 def get_token_throughput_latencies(
-    model: str,
-    mean_input_tokens: int,
-    stddev_input_tokens: int,
-    mean_output_tokens: int,
-    stddev_output_tokens: int,
-    additional_sampling_params: Optional[Dict[str, Any]] = None,
-    num_concurrent_requests: int = 1,
-    max_num_completed_requests: int = 500,
-    test_timeout_s=90,
-    llm_api="openai",
+        model: str,
+        mean_input_tokens: int,
+        stddev_input_tokens: int,
+        mean_output_tokens: int,
+        stddev_output_tokens: int,
+        additional_sampling_params: Optional[Dict[str, Any]] = None,
+        num_concurrent_requests: int = 1,
+        max_num_completed_requests: int = 500,
+        test_timeout_s=90,
+        llm_api="openai",
 ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Get the token throughput and latencies for the given model.
 
@@ -76,8 +78,8 @@ def get_token_throughput_latencies(
     iter = 0
     pbar = tqdm(total=max_num_completed_requests)
     while (
-        time.monotonic() - start_time < test_timeout_s
-        and len(completed_requests) < max_num_completed_requests
+            time.monotonic() - start_time < test_timeout_s
+            and len(completed_requests) < max_num_completed_requests
     ):
         iter += 1
         num_output_tokens = sample_random_positive_int(
@@ -114,10 +116,10 @@ def get_token_throughput_latencies(
                     request_metrics[common_metrics.INTER_TOKEN_LAT] = 0
                 request_metrics[common_metrics.NUM_OUTPUT_TOKENS] = num_output_tokens
                 request_metrics[common_metrics.NUM_TOTAL_TOKENS] = (
-                    request_metrics[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
+                        request_metrics[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
                 )
                 request_metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = (
-                    num_output_tokens / request_metrics[common_metrics.E2E_LAT]
+                        num_output_tokens / request_metrics[common_metrics.E2E_LAT]
                 )
                 all_metrics.append(request_metrics)
             completed_requests.extend(all_metrics)
@@ -141,10 +143,10 @@ def get_token_throughput_latencies(
             request_metrics[common_metrics.INTER_TOKEN_LAT] = 0
         request_metrics[common_metrics.NUM_OUTPUT_TOKENS] = num_output_tokens
         request_metrics[common_metrics.NUM_TOTAL_TOKENS] = (
-            request_metrics[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
+                request_metrics[common_metrics.NUM_INPUT_TOKENS] + num_output_tokens
         )
         request_metrics[common_metrics.REQ_OUTPUT_THROUGHPUT] = (
-            num_output_tokens / request_metrics[common_metrics.E2E_LAT]
+                num_output_tokens / request_metrics[common_metrics.E2E_LAT]
         )
 
         all_metrics.append(request_metrics)
@@ -169,7 +171,7 @@ def get_token_throughput_latencies(
 
 
 def metrics_summary(
-    metrics: List[Dict[str, Any]], start_time: int, end_time: int
+        metrics: List[Dict[str, Any]], start_time: int, end_time: int
 ) -> Dict[str, Any]:
     """Generate a summary over metrics generated from potentially multiple instances of this client.
 
@@ -247,15 +249,15 @@ def metrics_summary(
     ret[common_metrics.ERROR_CODE_FREQ] = str(error_code_frequency)
 
     overall_output_throughput = df_without_errored_req[
-        common_metrics.NUM_OUTPUT_TOKENS
-    ].sum() / (end_time - start_time)
+                                    common_metrics.NUM_OUTPUT_TOKENS
+                                ].sum() / (end_time - start_time)
 
     print(f"Overall Output Throughput: {overall_output_throughput}")
     ret[common_metrics.OUTPUT_THROUGHPUT] = overall_output_throughput
 
     num_completed_requests = len(df_without_errored_req)
     num_completed_requests_per_min = (
-        num_completed_requests / (end_time - start_time) * 60
+            num_completed_requests / (end_time - start_time) * 60
     )
     print(f"Number Of Completed Requests: {num_completed_requests}")
     print(f"Completed Requests Per Minute: {num_completed_requests_per_min}")
@@ -267,18 +269,18 @@ def metrics_summary(
 
 
 def run_token_benchmark(
-    llm_api: str,
-    model: str,
-    test_timeout_s: int,
-    max_num_completed_requests: int,
-    num_concurrent_requests: int,
-    mean_input_tokens: int,
-    stddev_input_tokens: int,
-    mean_output_tokens: int,
-    stddev_output_tokens: int,
-    additional_sampling_params: str,
-    results_dir: str,
-    user_metadata: Dict[str, Any],
+        llm_api: str,
+        model: str,
+        test_timeout_s: int,
+        max_num_completed_requests: int,
+        num_concurrent_requests: int,
+        mean_input_tokens: int,
+        stddev_input_tokens: int,
+        mean_output_tokens: int,
+        stddev_output_tokens: int,
+        additional_sampling_params: str,
+        results_dir: str,
+        user_metadata: Dict[str, Any],
 ):
     """
     Args:
@@ -317,7 +319,7 @@ def run_token_benchmark(
     )
 
     if results_dir:
-        filename = f"{model}_{mean_input_tokens}_{mean_output_tokens}"
+        filename = f"{model}_{mean_input_tokens}_{mean_output_tokens}_{num_concurrent_requests}"
         filename = re.sub(r"[^\w\d-]+", "-", filename)
         filename = re.sub(r"-{2,}", "-", filename)
         summary_filename = f"{filename}_summary"
@@ -353,12 +355,11 @@ args = argparse.ArgumentParser(
 )
 
 args.add_argument(
-    "--model", type=str, required=True, help="The model to use for this load test."
+    "--model", type=str, help="The model to use for this load test."
 )
 args.add_argument(
     "--mean-input-tokens",
     type=int,
-    default=550,
     help=(
         "The mean number of tokens to send in the prompt for the request. "
         " (default: %(default)s)"
@@ -367,7 +368,6 @@ args.add_argument(
 args.add_argument(
     "--stddev-input-tokens",
     type=int,
-    default=150,
     help=(
         "The standard deviation of number of tokens to send in the prompt for the request. "
         "(default: %(default)s)"
@@ -376,7 +376,6 @@ args.add_argument(
 args.add_argument(
     "--mean-output-tokens",
     type=int,
-    default=150,
     help=(
         "The mean number of tokens to generate from each llm request. This is the max_tokens param "
         "for the completions API. Note that this is not always the number of tokens returned. "
@@ -386,7 +385,6 @@ args.add_argument(
 args.add_argument(
     "--stddev-output-tokens",
     type=int,
-    default=80,
     help=(
         "The stdandard deviation on the number of tokens to generate per llm request. "
         "(default: %(default)s)"
@@ -395,19 +393,16 @@ args.add_argument(
 args.add_argument(
     "--num-concurrent-requests",
     type=int,
-    default=10,
     help=("The number of concurrent requests to send (default: %(default)s)"),
 )
 args.add_argument(
     "--timeout",
     type=int,
-    default=90,
     help="The amount of time to run the load test before killing the process. (default: %(default)s)",
 )
 args.add_argument(
     "--max-num-completed-requests",
     type=int,
-    default=10,
     help=(
         "The number of requests to complete before finishing the test. Note "
         "that its possible for the test to timeout first. (default: %(default)s)"
@@ -416,7 +411,6 @@ args.add_argument(
 args.add_argument(
     "--additional-sampling-params",
     type=str,
-    default="{}",
     help=(
         "Additional sampling params to send with the each request to the LLM API. "
         "(default: %(default)s) No additional sampling params are sent."
@@ -425,7 +419,6 @@ args.add_argument(
 args.add_argument(
     "--results-dir",
     type=str,
-    default="",
     help=(
         "The directory to save the results to. "
         "(`default: %(default)s`) No results are saved)"
@@ -434,7 +427,6 @@ args.add_argument(
 args.add_argument(
     "--llm-api",
     type=str,
-    default="openai",
     help=(
         f"The name of the llm api to use. Can select from {SUPPORTED_APIS}"
         " (default: %(default)s)"
@@ -443,10 +435,17 @@ args.add_argument(
 args.add_argument(
     "--metadata",
     type=str,
-    default="",
     help=(
         "A comma separated list of metadata to include in the results, e.g. "
         "name=foo,bar=1. These will be added to the metadata field of the results. "
+    ),
+)
+args.add_argument(
+    "--batch-config-file",
+    type=str,
+    default="",
+    help=(
+        "path to a yaml file containing configurations for a batch of benchmarks. "
     ),
 )
 
@@ -462,17 +461,46 @@ if __name__ == "__main__":
             key, value = item.split("=")
             user_metadata[key] = value
 
-    run_token_benchmark(
-        llm_api=args.llm_api,
-        model=args.model,
-        test_timeout_s=args.timeout,
-        max_num_completed_requests=args.max_num_completed_requests,
-        mean_input_tokens=args.mean_input_tokens,
-        stddev_input_tokens=args.stddev_input_tokens,
-        mean_output_tokens=args.mean_output_tokens,
-        stddev_output_tokens=args.stddev_output_tokens,
-        num_concurrent_requests=args.num_concurrent_requests,
-        additional_sampling_params=args.additional_sampling_params,
-        results_dir=args.results_dir,
-        user_metadata=user_metadata,
-    )
+    config = []
+    if args.batch_config_file != "":
+        with open(args.batch_config_file) as f:
+            config = yaml.load(f, Loader=FullLoader)
+
+    else:
+        config.append(dict(
+            llm_api=args.llm_api,
+            model=args.model,
+            test_timeout_s=args.timeout,
+            max_num_completed_requests=args.max_num_completed_requests,
+            mean_input_tokens=args.mean_input_tokens,
+            stddev_input_tokens=args.stddev_input_tokens,
+            mean_output_tokens=args.mean_output_tokens,
+            stddev_output_tokens=args.stddev_output_tokens,
+            num_concurrent_requests=args.num_concurrent_requests,
+            additional_sampling_params=args.additional_sampling_params,
+            results_dir=args.results_dir,
+            user_metadata=user_metadata,
+        ))
+
+    parameter_defaults = {
+        "llm_api": "transformers-lib",
+        "test_timeout_s": 90,
+        "max_num_completed_requests": 10,
+        "mean_input_tokens": 550,
+        "stddev_input_tokens": 150,
+        "mean_output_tokens": 150,
+        "stddev_output_tokens": 80,
+        "num_concurrent_requests": 10,
+        "additional_sampling_params": "{}",
+        "results_dir": "",
+        "user_metadata": user_metadata
+    }
+
+    for conf in config:
+        for key in parameter_defaults.keys():
+            if key not in conf:
+                conf[key] = parameter_defaults[key]
+        breakpoint()
+        run_token_benchmark(
+            **conf
+        )
