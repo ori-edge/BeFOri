@@ -415,6 +415,7 @@ args.add_argument(
 args.add_argument(
     "--additional-sampling-params",
     type=str,
+    default="",
     help=(
         "Additional sampling params to send with the each request to the LLM API. "
         "(default: %(default)s) No additional sampling params are sent."
@@ -451,7 +452,6 @@ args.add_argument(
         "attention implementation for models using the transformers lib, (e.g. flash_attention_2. "
     ),
 )
-
 args.add_argument(
     "--batch-config-file",
     type=str,
