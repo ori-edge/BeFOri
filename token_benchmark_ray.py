@@ -415,7 +415,7 @@ args.add_argument(
 args.add_argument(
     "--additional-sampling-params",
     type=str,
-    default="",
+    default="{}",
     help=(
         "Additional sampling params to send with the each request to the LLM API. "
         "(default: %(default)s) No additional sampling params are sent."
@@ -493,7 +493,7 @@ if __name__ == "__main__":
             additional_sampling_params=args.additional_sampling_params,
             results_dir=args.results_dir,
             user_metadata=user_metadata,
-            attn_implementation=args.attn_implementation,
+            =args.attn_implementation,
         ))
 
     parameter_defaults = {
