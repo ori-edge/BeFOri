@@ -1,4 +1,4 @@
-- model: "databricks/dbrx-instruct"
+- model: "bert-base-uncased"
   test_timeout_s: 10800
   max_num_completed_requests: 10
   mean_input_tokens: 64
@@ -8,7 +8,7 @@
   num_concurrent_requests: 1
   results_dir: result_outputs
   llm_api: transformers-lib
-- model: "databricks/dbrx-instruct"
+- model: "bert-base-uncased"
   test_timeout_s: 10800
   max_num_completed_requests: 20
   mean_input_tokens: 64
@@ -18,7 +18,7 @@
   num_concurrent_requests: 2
   results_dir: result_outputs
   llm_api: transformers-lib
-- model: "databricks/dbrx-instruct"
+- model: "bert-base-uncased"
   test_timeout_s: 10800
   max_num_completed_requests: 40
   mean_input_tokens: 64
@@ -28,7 +28,7 @@
   num_concurrent_requests: 4
   results_dir: result_outputs
   llm_api: transformers-lib
-- model: "databricks/dbrx-instruct"
+- model: "bert-base-uncased"
   test_timeout_s: 10800
   max_num_completed_requests: 80
   mean_input_tokens: 64
