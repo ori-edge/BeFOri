@@ -493,7 +493,7 @@ if __name__ == "__main__":
             additional_sampling_params=args.additional_sampling_params,
             results_dir=args.results_dir,
             user_metadata=user_metadata,
-            =args.attn_implementation,
+            attn_implementation=args.attn_implementation,
         ))
 
     parameter_defaults = {
