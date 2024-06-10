@@ -468,7 +468,6 @@ if __name__ == "__main__":
         for item in args.metadata.split(","):
             key, value = item.split("=")
             user_metadata[key] = value
-    user_metadata = json.dumps(user_metadata)
 
     config = []
     if args.batch_config_file != "":
