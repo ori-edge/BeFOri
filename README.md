@@ -1,6 +1,6 @@
 # LLMPerf
 
-A Tool for evaluqting the performance of GPU chips for LLMs.
+A Tool for evaluating the performance of GPU chips for LLMs.
 
 # Installation
 ```bash
