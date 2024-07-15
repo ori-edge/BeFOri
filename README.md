@@ -1,12 +1,11 @@
-# LLMPerf
+# BeFOri
 
-A Tool for evaluqting the performance of GPU chips for LLMs.
+A Tool for evaluating the performance of GPU chips for LLMs.
 
 # Installation
 ```bash
 git clone https://github.com/ori-edge/BeFOri.git
 cd ./BeFOri
-python3 -m build 
 pip install -r requirements.txt
 export PYTHONPATH="/PATH/TO/ori-llmperf/src/"
 
