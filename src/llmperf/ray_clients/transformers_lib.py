@@ -32,6 +32,12 @@ class TransformersLibClient(LLMClient):
         if self.model is None:
             os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
             model_args = {"token": self.access_token}
+            if request_config.model.startswith("microsoft/Phi-3"):
+                model_args.update(
+                    {
+                        "trust_remote_code": True
+                    }
+                )
             if request_config.model.startswith("databricks"):
                 model_args.update(
                     {
