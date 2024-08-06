@@ -50,6 +50,13 @@ class TransformersLibClient(LLMClient):
                 model_args.update(
                     {"attn_implementation": request_config.attn_implementation}
                 )
+            if request_config.model =="meta-llama/Meta-Llama-3.1-8B":
+                model_args.update(
+                    {
+                        "torch_dtype": torch.bfloat16,
+                        "device_map": "auto",
+                    }
+                )
             self.model = AutoModelForCausalLM.from_pretrained(
                 request_config.model, **model_args
             )
