@@ -54,7 +54,6 @@ class TransformersLibClient(LLMClient):
                 model_args.update(
                     {
                         "torch_dtype": torch.bfloat16,
-                        "device_map": "auto",
                     }
                 )
             self.model = AutoModelForCausalLM.from_pretrained(
