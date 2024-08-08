@@ -33,11 +33,7 @@ class TransformersLibClient(LLMClient):
             os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
             model_args = {"token": self.access_token}
             if request_config.model.startswith("microsoft/Phi-3"):
-                model_args.update(
-                    {
-                        "trust_remote_code": True
-                    }
-                )
+                model_args.update({"trust_remote_code": True})
             if request_config.model.startswith("databricks"):
                 model_args.update(
                     {
@@ -50,7 +46,7 @@ class TransformersLibClient(LLMClient):
                 model_args.update(
                     {"attn_implementation": request_config.attn_implementation}
                 )
-            if request_config.model =="meta-llama/Meta-Llama-3.1-8B":
+            if request_config.model == "meta-llama/Meta-Llama-3.1-8B":
                 model_args.update(
                     {
                         "torch_dtype": torch.bfloat16,
