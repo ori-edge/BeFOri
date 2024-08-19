@@ -1,5 +1,4 @@
 import torch
-from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 import os
 import time
 from typing import Any, Dict
@@ -14,11 +13,6 @@ from llmperf import common_metrics
 class TransformersLibClient(LLMClient):
     """Client for self-hosted models via the transformers library from HuggingFace for Chat Completions"""
 
-    def __init__(self):
-        self.access_token = os.environ.get("HF_ACCESS_TOKEN")
-        self.model = None
-        self.tokenizer = None
-
     def llm_request(self, request_config: RequestConfig) -> Dict[str, Any]:
         """Make a single completion request to a LLM API
 
@@ -28,40 +22,6 @@ class TransformersLibClient(LLMClient):
             The request_config used to make the request. This is mainly for logging purposes.
 
         """
-        # Load the model and tokenizer once and reuse them
-        if self.model is None:
-            os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
-            model_args = {"token": self.access_token}
-            if request_config.model.startswith("microsoft/Phi-3"):
-                model_args.update({"trust_remote_code": True})
-            if request_config.model.startswith("databricks"):
-                model_args.update(
-                    {
-                        "device_map": "auto",
-                        "torch_dtype": torch.bfloat16,
-                        "low_cpu_mem_usage": True,
-                    }
-                )
-            if request_config.attn_implementation != "":
-                model_args.update(
-                    {"attn_implementation": request_config.attn_implementation}
-                )
-            if request_config.model == "meta-llama/Meta-Llama-3.1-8B":
-                model_args.update(
-                    {
-                        "torch_dtype": torch.bfloat16,
-                    }
-                )
-            self.model = AutoModelForCausalLM.from_pretrained(
-                request_config.model, **model_args
-            )
-            # Set model to evaluation mode
-            self.model.eval()
-        if self.tokenizer is None:
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                request_config.model, token=self.access_token
-            )
-
         max_length = request_config.sampling_params["max_tokens"]
         prompt = request_config.prompt
         prompt, prompt_len = prompt
@@ -75,16 +35,16 @@ class TransformersLibClient(LLMClient):
         metrics[common_metrics.ERROR_MSG] = ""
 
         try:
-            input_ids = self.tokenizer.encode(prompt, return_tensors="pt")
+            input_ids = request_config.tokenizer.encode(prompt, return_tensors="pt")
 
             ttft_start_time = time.monotonic()
             with torch.no_grad():
-                outputs = self.model.generate(
+                outputs = request_config.model.generate(
                     inputs=input_ids,
                     max_new_tokens=1,
-                    pad_token_id=self.tokenizer.eos_token_id,
+                    pad_token_id=request_config.tokenizer.eos_token_id,
                 )
-            first_token = self.tokenizer.decode(
+            first_token = request_config.tokenizer.decode(
                 outputs[0][-1], skip_special_tokens=True
             )
             ttft = time.monotonic() - ttft_start_time
@@ -92,12 +52,12 @@ class TransformersLibClient(LLMClient):
             # Generate the full response
             start_time = time.monotonic()
             with torch.no_grad():
-                outputs = self.model.generate(
+                outputs = request_config.model.generate(
                     inputs=input_ids,
                     max_length=max_length,
-                    pad_token_id=self.tokenizer.eos_token_id,
+                    pad_token_id=request_config.tokenizer.eos_token_id,
                 )
-            generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            generated_text = request_config.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
             total_request_time = time.monotonic() - start_time
             tokens_received = outputs.shape[1]

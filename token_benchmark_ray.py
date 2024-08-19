@@ -21,6 +21,7 @@ from llmperf.utils import (
     randomly_sample_sonnet_lines_prompt,
     LLMPerfResults,
     sample_random_positive_int,
+    TransformersModel,
 )
 from tqdm import tqdm
 
@@ -469,6 +470,16 @@ if __name__ == "__main__":
             key, value = item.split("=")
             user_metadata[key] = value
 
+    if args.llm_api == "transformers_lib":
+        transformers_model = TransformersModel(model_id=args.model)
+        transformers_model.load(attn_implementation=args.attn_implementation)
+        transformer_args = {
+            "model": transformers_model.model,
+            "tokenizer": transformers_model.tokenizer,
+        }
+    else:
+        transformer_args = {}
+
     config = []
     if args.batch_config_file != "":
         with open(args.batch_config_file) as f:
@@ -490,7 +501,7 @@ if __name__ == "__main__":
                 results_dir=args.results_dir,
                 user_metadata=user_metadata,
                 attn_implementation=args.attn_implementation,
-            )
+            ) | transformer_args
         )
 
     parameter_defaults = {
@@ -506,7 +517,7 @@ if __name__ == "__main__":
         "results_dir": "",
         "user_metadata": user_metadata,
         "attn_implementation": "",
-    }
+    } | transformer_args
 
     for conf in config:
         for key in parameter_defaults.keys():

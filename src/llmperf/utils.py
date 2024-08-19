@@ -4,9 +4,11 @@ import pathlib
 import random
 import subprocess
 import time
+import torch
+import os
 from typing import Any, Dict, Tuple
 
-from transformers import LlamaTokenizerFast
+from transformers import LlamaTokenizerFast, AutoTokenizer, AutoModelForCausalLM
 
 
 RESULTS_VERSION = "2023-08-31"
@@ -145,3 +147,47 @@ def flatten_dict(d, parent_key="", sep="_"):
         else:
             items.append((new_key, v))
     return dict(items)
+
+
+class TransformersModel:
+    def __init__(self, model_id):
+        self.model_id = model_id
+        self.hf_access_token = os.environ.get("HF_ACCESS_TOKEN")
+        self.model = None
+        self.tokenizer = None
+
+    def load(self, attn_implementation: str):
+        self._load_transformer_model_from_pretrained(**{"attn_implementation": attn_implementation})
+        self._load_transformers_auto_tokenizer()
+
+    def _load_transformer_model_from_pretrained(self, **kwargs):
+        # Set environment variable for faster download
+        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+        # Prepare parameters for model
+        model_args = {"token": self.hf_access_token}
+        model_args.update(kwargs)
+        if self.model_id.startswith("microsoft/Phi-3"):
+            model_args.update(
+                {
+                    "trust_remote_code": True
+                }
+            )
+        if self.model_id.startswith("databricks"):
+            model_args.update(
+                {
+                    "device_map": "auto",
+                    "torch_dtype": torch.bfloat16,
+                    "low_cpu_mem_usage": True,
+                }
+            )
+        # Load model
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.model_id, **model_args
+        )
+        # Set model to evaluation mode
+        self.model.eval()
+
+    def _load_transformers_auto_tokenizer(self):
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_id, token=self.hf_access_token
+        )
