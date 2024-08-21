@@ -461,7 +461,9 @@ args.add_argument(
 if __name__ == "__main__":
     env_vars = dict(os.environ)
     ray.init(runtime_env={"env_vars": env_vars})
-    args = args.parse_args()
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    print(args)
 
     # Parse user metadata.
     user_metadata = {}
