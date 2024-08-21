@@ -1,5 +1,4 @@
 from typing import Any, Dict, Optional, Tuple
-from transformers import PreTrainedModel, AutoTokenizer
 from pydantic import BaseModel
 
 
@@ -21,5 +20,5 @@ class RequestConfig(BaseModel):
     llm_api: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     attn_implementation: Optional[str] = None
-    model: Optional[PreTrainedModel] = None
-    tokenizer: Optional[AutoTokenizer] = None
+    model: Optional[Any] = None
+    tokenizer: Optional[Any] = None
