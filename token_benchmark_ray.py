@@ -355,113 +355,114 @@ def run_token_benchmark(
             raise e
 
 
-args = argparse.ArgumentParser(
-    description="Run a token throughput and latency benchmark."
-)
 
-args.add_argument("--model", type=str, help="The model to use for this load test.")
-args.add_argument(
-    "--mean-input-tokens",
-    type=int,
-    help=(
-        "The mean number of tokens to send in the prompt for the request. "
-        " (default: %(default)s)"
-    ),
-)
-args.add_argument(
-    "--stddev-input-tokens",
-    type=int,
-    help=(
-        "The standard deviation of number of tokens to send in the prompt for the request. "
-        "(default: %(default)s)"
-    ),
-)
-args.add_argument(
-    "--mean-output-tokens",
-    type=int,
-    help=(
-        "The mean number of tokens to generate from each llm request. This is the max_tokens param "
-        "for the completions API. Note that this is not always the number of tokens returned. "
-        "(default: %(default)s)"
-    ),
-)
-args.add_argument(
-    "--stddev-output-tokens",
-    type=int,
-    help=(
-        "The stdandard deviation on the number of tokens to generate per llm request. "
-        "(default: %(default)s)"
-    ),
-)
-args.add_argument(
-    "--num-concurrent-requests",
-    type=int,
-    help=("The number of concurrent requests to send (default: %(default)s)"),
-)
-args.add_argument(
-    "--timeout",
-    type=int,
-    help="The amount of time to run the load test before killing the process. (default: %(default)s)",
-)
-args.add_argument(
-    "--max-num-completed-requests",
-    type=int,
-    help=(
-        "The number of requests to complete before finishing the test. Note "
-        "that its possible for the test to timeout first. (default: %(default)s)"
-    ),
-)
-args.add_argument(
-    "--additional-sampling-params",
-    type=str,
-    default="{}",
-    help=(
-        "Additional sampling params to send with the each request to the LLM API. "
-        "(default: %(default)s) No additional sampling params are sent."
-    ),
-)
-args.add_argument(
-    "--results-dir",
-    type=str,
-    help=(
-        "The directory to save the results to. "
-        "(`default: %(default)s`) No results are saved)"
-    ),
-)
-args.add_argument(
-    "--llm-api",
-    type=str,
-    help=(
-        f"The name of the llm api to use. Can select from {SUPPORTED_APIS}"
-        " (default: %(default)s)"
-    ),
-)
-args.add_argument(
-    "--metadata",
-    type=str,
-    help=(
-        "A comma separated list of metadata to include in the results, e.g. "
-        "name=foo,bar=1. These will be added to the metadata field of the results. "
-    ),
-)
-args.add_argument(
-    "--attn-implementation",
-    type=str,
-    help=(
-        "attention implementation for models using the transformers lib, (e.g. flash_attention_2. "
-    ),
-)
-args.add_argument(
-    "--batch-config-file",
-    type=str,
-    default="",
-    help=("path to a yaml file containing configurations for a batch of benchmarks. "),
-)
 
 if __name__ == "__main__":
     env_vars = dict(os.environ)
     ray.init(runtime_env={"env_vars": env_vars})
-    parser = argparse.ArgumentParser()
+
+    parser = argparse.ArgumentParser(
+        description="Run a token throughput and latency benchmark."
+    )
+    parser.add_argument("--model", type=str, help="The model to use for this load test.")
+    parser.add_argument(
+        "--mean-input-tokens",
+        type=int,
+        help=(
+            "The mean number of tokens to send in the prompt for the request. "
+            " (default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--stddev-input-tokens",
+        type=int,
+        help=(
+            "The standard deviation of number of tokens to send in the prompt for the request. "
+            "(default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--mean-output-tokens",
+        type=int,
+        help=(
+            "The mean number of tokens to generate from each llm request. This is the max_tokens param "
+            "for the completions API. Note that this is not always the number of tokens returned. "
+            "(default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--stddev-output-tokens",
+        type=int,
+        help=(
+            "The stdandard deviation on the number of tokens to generate per llm request. "
+            "(default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--num-concurrent-requests",
+        type=int,
+        help=("The number of concurrent requests to send (default: %(default)s)"),
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        help="The amount of time to run the load test before killing the process. (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--max-num-completed-requests",
+        type=int,
+        help=(
+            "The number of requests to complete before finishing the test. Note "
+            "that its possible for the test to timeout first. (default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--additional-sampling-params",
+        type=str,
+        default="{}",
+        help=(
+            "Additional sampling params to send with the each request to the LLM API. "
+            "(default: %(default)s) No additional sampling params are sent."
+        ),
+    )
+    parser.add_argument(
+        "--results-dir",
+        type=str,
+        help=(
+            "The directory to save the results to. "
+            "(`default: %(default)s`) No results are saved)"
+        ),
+    )
+    parser.add_argument(
+        "--llm-api",
+        type=str,
+        help=(
+            f"The name of the llm api to use. Can select from {SUPPORTED_APIS}"
+            " (default: %(default)s)"
+        ),
+    )
+    parser.add_argument(
+        "--metadata",
+        type=str,
+        help=(
+            "A comma separated list of metadata to include in the results, e.g. "
+            "name=foo,bar=1. These will be added to the metadata field of the results. "
+        ),
+    )
+    parser.add_argument(
+        "--attn-implementation",
+        type=str,
+        help=(
+            "attention implementation for models using the transformers lib, (e.g. flash_attention_2. "
+        ),
+    )
+    parser.add_argument(
+        "--batch-config-file",
+        type=str,
+        default="",
+        help=("path to a yaml file containing configurations for a batch of benchmarks. "),
+    )
+
     args = parser.parse_args()
     print(args)
 
