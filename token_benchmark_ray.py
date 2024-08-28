@@ -282,7 +282,7 @@ def metrics_summary(
 def run_token_benchmark(
     llm_api: str,
     model: str,
-    test_timeout_s: int,
+    timeout: int,
     max_num_completed_requests: int,
     num_concurrent_requests: int,
     mean_input_tokens: int,
@@ -301,7 +301,7 @@ def run_token_benchmark(
         llm_api: The name of the llm api to use.
         model: The name of the model to query.
         max_num_completed_requests: The number of requests to complete before finishing the test.
-        test_timeout_s: The amount of time to run the test for before reporting results.
+        timeout: The amount of time to run the test for before reporting results.
         num_concurrent_requests: The number of concurrent requests to make. Increase
             this to increase the amount of load and vice versa.
         mean_input_tokens: The mean number of tokens to send in the prompt for the request.
@@ -324,7 +324,7 @@ def run_token_benchmark(
     summary, individual_responses = get_token_throughput_latencies(
         model=model,
         llm_api=llm_api,
-        test_timeout_s=test_timeout_s,
+        test_timeout_s=timeout,
         max_num_completed_requests=max_num_completed_requests,
         mean_input_tokens=mean_input_tokens,
         stddev_input_tokens=stddev_input_tokens,
