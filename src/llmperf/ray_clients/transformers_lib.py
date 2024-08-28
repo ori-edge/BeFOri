@@ -35,16 +35,16 @@ class TransformersLibClient(LLMClient):
         metrics[common_metrics.ERROR_MSG] = ""
 
         try:
-            input_ids = request_config.tokenizer.encode(prompt, return_tensors="pt")
+            input_ids = request_config.tokenizer_obj.encode(prompt, return_tensors="pt")
 
             ttft_start_time = time.monotonic()
             with torch.no_grad():
-                outputs = request_config.model.generate(
+                outputs = request_config.llm_obj.generate(
                     inputs=input_ids,
                     max_new_tokens=1,
-                    pad_token_id=request_config.tokenizer.eos_token_id,
+                    pad_token_id=request_config.tokenizer_obj.eos_token_id,
                 )
-            first_token = request_config.tokenizer.decode(
+            first_token = request_config.tokenizer_obj.decode(
                 outputs[0][-1], skip_special_tokens=True
             )
             ttft = time.monotonic() - ttft_start_time
@@ -52,12 +52,12 @@ class TransformersLibClient(LLMClient):
             # Generate the full response
             start_time = time.monotonic()
             with torch.no_grad():
-                outputs = request_config.model.generate(
+                outputs = request_config.llm_obj.generate(
                     inputs=input_ids,
                     max_length=max_length,
-                    pad_token_id=request_config.tokenizer.eos_token_id,
+                    pad_token_id=request_config.tokenizer_obj.eos_token_id,
                 )
-            generated_text = request_config.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            generated_text = request_config.tokenizer_obj.decode(outputs[0], skip_special_tokens=True)
 
             total_request_time = time.monotonic() - start_time
             tokens_received = outputs.shape[1]
