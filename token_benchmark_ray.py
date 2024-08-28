@@ -463,49 +463,32 @@ if __name__ == "__main__":
         help=("path to a yaml file containing configurations for a batch of benchmarks. "),
     )
 
-    args = parser.parse_args()
-    print(args)
+    args = vars(parser.parse_args())
+
 
     # Parse user metadata.
     user_metadata = {}
-    if args.metadata:
-        for item in args.metadata.split(","):
+    if args["metadata"]:
+        for item in args["metadata"].split(","):
             key, value = item.split("=")
             user_metadata[key] = value
 
-    if args.llm_api == "transformers_lib":
-        transformers_model = TransformersModel(model_id=args.model)
-        transformers_model.load(attn_implementation=args.attn_implementation)
-        transformer_args = {
+    transformers_args = {}
+    if args["llm_api"] == "transformers_lib":
+        transformers_model = TransformersModel(model_id=args["model"])
+        transformers_model.load(attn_implementation=args["attn_implementation"])
+        transformers_args = {
             "model": transformers_model.model,
             "tokenizer": transformers_model.tokenizer,
         }
-    else:
-        transformer_args = {}
 
     config = []
-    if args.batch_config_file != "":
-        with open(args.batch_config_file) as f:
+    if args["batch_config_file"] != "":
+        with open(args["batch_config_file"]) as f:
             config = yaml.load(f, Loader=FullLoader)
 
     else:
-        config.append(
-            dict(
-                llm_api=args.llm_api,
-                model=args.model,
-                test_timeout_s=args.timeout,
-                max_num_completed_requests=args.max_num_completed_requests,
-                mean_input_tokens=args.mean_input_tokens,
-                stddev_input_tokens=args.stddev_input_tokens,
-                mean_output_tokens=args.mean_output_tokens,
-                stddev_output_tokens=args.stddev_output_tokens,
-                num_concurrent_requests=args.num_concurrent_requests,
-                additional_sampling_params=args.additional_sampling_params,
-                results_dir=args.results_dir,
-                user_metadata=user_metadata,
-                attn_implementation=args.attn_implementation,
-            ) | transformer_args
-        )
+        config.append(args | {"user_metadata": user_metadata} | transformers_args)
 
     parameter_defaults = {
         "llm_api": "transformers-lib",
@@ -520,11 +503,11 @@ if __name__ == "__main__":
         "results_dir": "",
         "user_metadata": user_metadata,
         "attn_implementation": "",
-    } | transformer_args
+    } | transformers_args
 
     for conf in config:
         for key in parameter_defaults.keys():
             if key not in conf:
                 conf[key] = parameter_defaults[key]
-        print(f"Running new benchmark \n {conf}")
+        print(f"\n\nRunning new benchmark \n {conf}")
         run_token_benchmark(**conf)
