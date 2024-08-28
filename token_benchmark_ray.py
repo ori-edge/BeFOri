@@ -291,7 +291,6 @@ def run_token_benchmark(
     stddev_output_tokens: int,
     additional_sampling_params: str,
     results_dir: str,
-    user_metadata: Dict[str, Any],
     attn_implementation: str,
     model_obj: Optional[Any] = None,
     tokenizer_obj: Optional[Any] = None,
@@ -343,9 +342,6 @@ def run_token_benchmark(
         filename = re.sub(r"-{2,}", "-", filename)
         summary_filename = f"{filename}_summary"
         individual_responses_filename = f"{filename}_individual_responses"
-
-        # Update to metadata.
-        summary.update(user_metadata)
 
         results = LLMPerfResults(name=summary_filename, metadata=summary)
         results_dir = Path(results_dir)
@@ -479,14 +475,6 @@ if __name__ == "__main__":
 
     args = vars(parser.parse_args())
 
-
-    # Parse user metadata.
-    user_metadata = {}
-    if args["metadata"]:
-        for item in args["metadata"].split(","):
-            key, value = item.split("=")
-            user_metadata[key] = value
-
     transformers_args = {}
     if args["llm_api"] == "transformers_lib":
         transformers_model = TransformersModel(model_id=args["model"])
@@ -497,16 +485,17 @@ if __name__ == "__main__":
         }
 
     config = []
-    if args["batch_config_file"] != "":
-        with open(args["batch_config_file"]) as f:
+    config_file = args.pop("batch_config_file")
+    if config_file != "":
+        with open(config_file) as f:
             config = yaml.load(f, Loader=FullLoader)
 
     else:
-        config.append(args | {"user_metadata": user_metadata} | transformers_args)
+        config.append(args | transformers_args)
 
     parameter_defaults = {
         "llm_api": "transformers-lib",
-        "test_timeout_s": 90,
+        "timeout": 90,
         "max_num_completed_requests": 10,
         "mean_input_tokens": 550,
         "stddev_input_tokens": 150,
@@ -515,13 +504,14 @@ if __name__ == "__main__":
         "num_concurrent_requests": 10,
         "additional_sampling_params": "{}",
         "results_dir": "",
-        "user_metadata": user_metadata,
         "attn_implementation": "",
     } | transformers_args
 
     for conf in config:
         for key in parameter_defaults.keys():
             if key not in conf:
+                print(f"\n\n WARNING: {key} was not provided in {config_file if config_file != '' else 'cli'}. "
+                      f"\n Defaulting to '{parameter_defaults[key]}'")
                 conf[key] = parameter_defaults[key]
         print(f"\n\nRunning new benchmark \n {conf}")
         run_token_benchmark(**conf)
