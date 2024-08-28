@@ -42,7 +42,7 @@ def get_token_throughput_latencies(
     test_timeout_s=90,
     llm_api="openai",
     user_metadata:Optional[Dict[str, Any]] = None,
-    model_obj: Optional[Any] = None,
+    llm_obj: Optional[Any] = None,
     tokenizer_obj: Optional[Any] = None
 ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     """Get the token throughput and latencies for the given model.
@@ -59,7 +59,7 @@ def get_token_throughput_latencies(
             this to increase the amount of load and vice versa.
         test_timeout_s: The amount of time to run the test for before reporting results.
         llm_api: The name of the llm api to use. Either "openai" or "litellm".
-        model_obj: transformers lib pretrained LLM object
+        llm_obj: transformers lib pretrained LLM object
         tokenizer_obj:  transformers lib transformers object
 
     Returns:
@@ -84,6 +84,7 @@ def get_token_throughput_latencies(
     start_time = time.monotonic()
     iter = 0
     pbar = tqdm(total=max_num_completed_requests)
+    breakpoint()
     while (
         time.monotonic() - start_time < test_timeout_s
         and len(completed_requests) < max_num_completed_requests
@@ -108,7 +109,7 @@ def get_token_throughput_latencies(
             llm_api=llm_api,
             metadata=user_metadata,
             attn_implementation=attn_implementation,
-            model_obj=model_obj,
+            llm_obj=llm_obj,
             tokenizer_obj=tokenizer_obj,
         )
         req_launcher.launch_requests(request_config)
@@ -292,7 +293,7 @@ def run_token_benchmark(
     additional_sampling_params: str,
     results_dir: str,
     attn_implementation: str,
-    model_obj: Optional[Any] = None,
+    llm_obj: Optional[Any] = None,
     tokenizer_obj: Optional[Any] = None,
 ):
     """
@@ -311,7 +312,7 @@ def run_token_benchmark(
             For more information see the LLM APIs documentation for the completions.
         results_dir: The directory to save the results to.
         user_metadata: Additional metadata to include in the results.
-        model_obj: transformers lib pretrained LLM object
+        llm_obj: transformers lib pretrained LLM object
         tokenizer_obj:  transformers lib transformers object
     """
     if mean_input_tokens < 40:
@@ -332,7 +333,7 @@ def run_token_benchmark(
         num_concurrent_requests=num_concurrent_requests,
         additional_sampling_params=json.loads(additional_sampling_params),
         attn_implementation=attn_implementation,
-        model_obj=model_obj,
+        llm_obj=llm_obj,
         tokenizer_obj=tokenizer_obj,
     )
 
@@ -472,7 +473,7 @@ if __name__ == "__main__":
         transformers_model = TransformersModel(model_id=args["model"])
         transformers_model.load(attn_implementation=args["attn_implementation"])
         transformers_args = {
-            "model_obj": transformers_model.model,
+            "llm_obj": transformers_model.model,
             "tokenizer_obj": transformers_model.tokenizer,
         }
 
