@@ -452,14 +452,6 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument(
-        "--metadata",
-        type=str,
-        help=(
-            "A comma separated list of metadata to include in the results, e.g. "
-            "name=foo,bar=1. These will be added to the metadata field of the results. "
-        ),
-    )
-    parser.add_argument(
         "--attn-implementation",
         type=str,
         help=(
