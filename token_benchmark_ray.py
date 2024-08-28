@@ -469,7 +469,7 @@ if __name__ == "__main__":
     cli_args = vars(parser.parse_args())
 
     transformers_args = {}
-    if cli_args["llm_api"] == "transformers_lib":
+    if cli_args["llm_api"] == "transformers-lib":
         transformers_model = TransformersModel(model_id=cli_args["model"])
         transformers_model.load(attn_implementation=cli_args["attn_implementation"])
         transformers_args = {
@@ -506,5 +506,5 @@ if __name__ == "__main__":
                 print(f"\n\n WARNING: {key} was not provided in {config_file if config_file != '' else 'cli args'}. "
                       f"\n Defaulting to '{str(parameter_defaults[key])}'")
                 conf[key] = parameter_defaults[key]
-        print(f"\n\nRunning new benchmark \n {conf}")
+        print(f"\n\nRunning new benchmark \n { {i:conf[i] for i in conf if '_obj' not in i} }")
         run_token_benchmark(**conf)
