@@ -466,25 +466,25 @@ if __name__ == "__main__":
         help=("path to a yaml file containing configurations for a batch of benchmarks. "),
     )
 
-    args = vars(parser.parse_args())
+    cli_args = vars(parser.parse_args())
 
     transformers_args = {}
-    if args["llm_api"] == "transformers_lib":
-        transformers_model = TransformersModel(model_id=args["model"])
-        transformers_model.load(attn_implementation=args["attn_implementation"])
+    if cli_args["llm_api"] == "transformers_lib":
+        transformers_model = TransformersModel(model_id=cli_args["model"])
+        transformers_model.load(attn_implementation=cli_args["attn_implementation"])
         transformers_args = {
             "llm_obj": transformers_model.model,
             "tokenizer_obj": transformers_model.tokenizer,
         }
 
     config = []
-    config_file = args.pop("batch_config_file")
+    config_file = cli_args.pop("batch_config_file")
     if config_file != "":
         with open(config_file) as f:
             config = yaml.load(f, Loader=FullLoader)
 
     else:
-        config.append(args | transformers_args)
+        config.append(cli_args | transformers_args)
 
     parameter_defaults = {
         "llm_api": "transformers-lib",
