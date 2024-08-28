@@ -84,7 +84,7 @@ def get_token_throughput_latencies(
     start_time = time.monotonic()
     iter = 0
     pbar = tqdm(total=max_num_completed_requests)
-    
+
     while (
         time.monotonic() - start_time < test_timeout_s
         and len(completed_requests) < max_num_completed_requests
@@ -503,8 +503,8 @@ if __name__ == "__main__":
     for conf in config:
         for key in parameter_defaults.keys():
             if key not in conf or conf[key] is None:
-                print(f"\n\n WARNING: {key} was not provided in {config_file if config_file != '' else 'cli'}. "
-                      f"\n Defaulting to '{parameter_defaults[key]}'")
+                print(f"\n\n WARNING: {key} was not provided in {config_file if config_file != '' else 'cli args'}. "
+                      f"\n Defaulting to '{str(parameter_defaults[key])}'")
                 conf[key] = parameter_defaults[key]
         print(f"\n\nRunning new benchmark \n {conf}")
         run_token_benchmark(**conf)
