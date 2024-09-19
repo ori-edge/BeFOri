@@ -4,9 +4,12 @@ import pathlib
 import random
 import subprocess
 import time
+from torch import bfloat16
 from typing import Any, Dict, Tuple
 
 from transformers import LlamaTokenizerFast
+
+from llmperf.models import RequestConfig
 
 
 RESULTS_VERSION = "2023-08-31"
@@ -145,3 +148,29 @@ def flatten_dict(d, parent_key="", sep="_"):
         else:
             items.append((new_key, v))
     return dict(items)
+
+
+def construct_transformers_args(request_config: RequestConfig) -> Dict[str, Any]:
+    model_args = {}
+    if request_config.model.startswith("microsoft/Phi-3"):
+        model_args.update({"trust_remote_code": True})
+    if request_config.model.startswith("databricks"):
+        model_args.update(
+            {
+                "device_map": "auto",
+                "torch_dtype": bfloat16,
+                "low_cpu_mem_usage": True,
+            }
+        )
+    if request_config.attn_implementation != "":
+        model_args.update(
+            {"attn_implementation": request_config.attn_implementation}
+        )
+    if request_config.model == "meta-llama/Meta-Llama-3.1-8B":
+        model_args.update(
+            {
+                "torch_dtype": bfloat16,
+            }
+        )
+
+    return model_args
