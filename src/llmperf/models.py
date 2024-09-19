@@ -20,5 +20,5 @@ class RequestConfig(BaseModel):
     llm_api: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     attn_implementation: Optional[str] = None
-    llm_obj: Optional[Any] = None
-    tokenizer_obj: Optional[Any] = None
+    llm_ref_id: Optional[Any] = None
+    tokenizer_ref_id: Optional[Any] = None

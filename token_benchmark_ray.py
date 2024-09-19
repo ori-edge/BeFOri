@@ -473,8 +473,8 @@ if __name__ == "__main__":
         transformers_model = TransformersModel(model_id=cli_args["model"])
         transformers_model.load(attn_implementation=cli_args["attn_implementation"])
         transformers_args = {
-            "llm_obj": transformers_model.model,
-            "tokenizer_obj": transformers_model.tokenizer,
+            "llm_ref_id": transformers_model.model_ref_id,
+            "tokenizer_ref_id": transformers_model.tokenizer_ref_id,
         }
 
     config = []
@@ -501,10 +501,11 @@ if __name__ == "__main__":
     } | transformers_args
 
     for conf in config:
+        print("\n\n*** Running new benchmark ***\n")
         for key in parameter_defaults.keys():
             if key not in conf or conf[key] is None:
                 print(f"\n\n WARNING: {key} was not provided in {config_file if config_file != '' else 'cli args'}. "
-                      f"\n Defaulting to '{str(parameter_defaults[key])}'")
+                      f"\n Defaulting to '{str(parameter_defaults[key])}'\n")
                 conf[key] = parameter_defaults[key]
-        print(f"\n\nRunning new benchmark \n { {i:conf[i] for i in conf if '_obj' not in i} }")
+        print(f"\n{ {i:conf[i] for i in conf if '_obj' not in i} }\n")
         run_token_benchmark(**conf)

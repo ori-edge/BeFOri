@@ -6,6 +6,7 @@ import subprocess
 import time
 import torch
 import os
+from ray import put
 from typing import Any, Dict, Tuple
 
 from transformers import LlamaTokenizerFast, AutoTokenizer, AutoModelForCausalLM
@@ -153,8 +154,8 @@ class TransformersModel:
     def __init__(self, model_id):
         self.model_id = model_id
         self.hf_access_token = os.environ.get("HF_ACCESS_TOKEN")
-        self.model = None
-        self.tokenizer = None
+        self.model_ref_id = None
+        self.tokenizer_ref_id = None
 
     def load(self, attn_implementation: str):
         self._load_transformer_model_from_pretrained(**{"attn_implementation": attn_implementation})
@@ -181,13 +182,15 @@ class TransformersModel:
                 }
             )
         # Load model
-        self.model = AutoModelForCausalLM.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(
             self.model_id, **model_args
         )
-        # Set model to evaluation mode
-        self.model.eval()
+
+        self.model_ref_id = put(model)
 
     def _load_transformers_auto_tokenizer(self):
-        self.tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer = AutoTokenizer.from_pretrained(
             self.model_id, token=self.hf_access_token
         )
+
+        self.tokenizer_ref_id = put(tokenizer)
