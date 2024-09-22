@@ -61,12 +61,4 @@ class DeployVllm:
                 # back to the event loop so other coroutines can run.
                 await asyncio.sleep(0.001)
 
-
-args = argparse.ArgumentParser(
-    description="Deploy a HuggingFace model using VLLM and FastAPI to stream responses"
-)
-args.add_argument("--model", type=str, help="The llm model name from HuggingFace.")
-if __name__ == "__main__":
-    args = args.parse_args()
-    app = DeployVllm.bind(args.model)
-    os.system("serve run deploy_vllm:app")
+app = DeployVllm.bind("meta-llama/Meta-Llama-3.1-8B-Instruct")
