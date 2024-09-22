@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 from queue import Empty
 
 from fastapi import FastAPI
@@ -68,3 +69,4 @@ args.add_argument("--model", type=str, help="The llm model name from HuggingFace
 if __name__ == "__main__":
     args = args.parse_args()
     app = Textbot.bind(args.model)
+    os.system("serve run textbot:app")
