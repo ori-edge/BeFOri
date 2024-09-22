@@ -28,7 +28,7 @@ class DeployVllm:
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_id, token=self.access_token, torch_dtype=bfloat16
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, token=self.access_token)
 
     @fastapi_app.post("/")
     def handle_request(self, prompt: str, max_length: int) -> StreamingResponse:
