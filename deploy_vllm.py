@@ -3,11 +3,10 @@ import asyncio
 import logging
 from queue import Empty
 
-from fastapi import FastAPI, Body
+from fastapi import FastAPI
 from starlette.responses import StreamingResponse
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 from torch import bfloat16
-from typing import Dict, Any
 from ray import serve
 
 logger = logging.getLogger("ray.serve")
@@ -23,7 +22,9 @@ class Textbot:
 
         self.model_id = model_id
         # TODO: update cli args to pass parameters to model
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_id, "torch_dtype": bfloat16)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.model_id, torch_dtype=bfloat16
+        )
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
 
     @fastapi_app.post("/")
@@ -32,16 +33,21 @@ class Textbot:
         streamer = TextIteratorStreamer(
             self.tokenizer, timeout=0, skip_prompt=True, skip_special_tokens=True
         )
-        self.loop.run_in_executor(None, self.generate_text, prompt, max_length, streamer)
+        self.loop.run_in_executor(
+            None, self.generate_text, prompt, max_length, streamer
+        )
         return StreamingResponse(
             self.consume_streamer(streamer), media_type="text/plain"
         )
 
-    def generate_text(self, prompt: str, max_length: int, streamer: TextIteratorStreamer):
+    def generate_text(
+        self, prompt: str, max_length: int, streamer: TextIteratorStreamer
+    ):
         input_ids = self.tokenizer([prompt], return_tensors="pt").input_ids
         self.model.generate(input_ids, streamer=streamer, max_length=max_length)
 
-    async def consume_streamer(self, streamer: TextIteratorStreamer):
+    @staticmethod
+    async def consume_streamer(streamer: TextIteratorStreamer):
         while True:
             try:
                 for token in streamer:
