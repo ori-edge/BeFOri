@@ -26,7 +26,7 @@ class DeployVllm:
         self.access_token = os.environ.get("HF_ACCESS_TOKEN")
         # TODO: update cli args to pass parameters to model
         self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_id, access_token=self.access_token, torch_dtype=bfloat16
+            self.model_id, token=self.access_token, torch_dtype=bfloat16
         )
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
 
