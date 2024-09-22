@@ -2,7 +2,6 @@ import asyncio
 import logging
 from queue import Empty
 
-from fastapi import FastAPI
 from starlette.responses import StreamingResponse
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 
@@ -10,11 +9,7 @@ from ray import serve
 
 logger = logging.getLogger("ray.serve")
 
-fastapi_app = FastAPI()
 
-
-@serve.deployment
-@serve.ingress(fastapi_app)
 class Textbot:
     def __init__(self, model_id: str):
         self.loop = asyncio.get_running_loop()
@@ -23,8 +18,6 @@ class Textbot:
         self.model = AutoModelForCausalLM.from_pretrained(self.model_id)
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
 
-
-    @fastapi_app.post("/")
     def handle_request(self, prompt: str) -> StreamingResponse:
         logger.info(f'Got prompt: "{prompt}"')
         streamer = TextIteratorStreamer(
@@ -52,4 +45,12 @@ class Textbot:
                 # back to the event loop so other coroutines can run.
                 await asyncio.sleep(0.001)
 
-app = Textbot.bind("microsoft/DialoGPT-small")
+
+if __name__ == "__main__":
+    tb = Textbot(model_id="microsoft/DialoGPT-small")
+    prompt = "Tell me a story about dogs."
+    response = tb.handle_request(prompt=prompt)
+    breakpoint()
+    for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
+        print(chunk, end="")
+
