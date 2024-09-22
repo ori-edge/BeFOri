@@ -22,9 +22,11 @@ class DeployVllm:
         self.loop = asyncio.get_running_loop()
 
         self.model_id = model_id
+        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+        self.access_token = os.environ.get("HF_ACCESS_TOKEN")
         # TODO: update cli args to pass parameters to model
         self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_id, torch_dtype=bfloat16
+            self.model_id, access_token=self.access_token, torch_dtype=bfloat16
         )
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
 
