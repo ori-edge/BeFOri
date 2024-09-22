@@ -17,7 +17,7 @@ fastapi_app = FastAPI()
 
 @serve.deployment
 @serve.ingress(fastapi_app)
-class Textbot:
+class DeployVllm:
     def __init__(self, model_id: str):
         self.loop = asyncio.get_running_loop()
 
@@ -68,5 +68,5 @@ args = argparse.ArgumentParser(
 args.add_argument("--model", type=str, help="The llm model name from HuggingFace.")
 if __name__ == "__main__":
     args = args.parse_args()
-    app = Textbot.bind(args.model)
+    app = DeployVllm.bind(args.model)
     os.system("serve run deploy_vllm:app")
