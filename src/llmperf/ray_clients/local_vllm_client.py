@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any, Dict, Tuple
 import ray
@@ -6,6 +7,8 @@ import requests
 from llmperf.ray_llm_client import LLMClient
 from llmperf.models import RequestConfig
 from llmperf import common_metrics
+
+from transformers import LlamaTokenizerFast
 
 
 @ray.remote
@@ -19,6 +22,10 @@ class LocalVLLMClient(LLMClient):
         generated_text = ""
         metrics = {common_metrics.ERROR_CODE: None, common_metrics.ERROR_MSG: ""}
         ttft = 0
+        tokenizer = LlamaTokenizerFast.from_pretrained(
+            "hf-internal-testing/llama-tokenizer"
+        )
+        get_token_length = lambda text: len(tokenizer.encode(text))
 
         # Prepare to call the fastapi endpoint
         url = "http://localhost:8000/"
@@ -46,9 +53,8 @@ class LocalVLLMClient(LLMClient):
             metrics[common_metrics.ERROR_MSG] = str(e)
             print(f"Warning Or Error: {e}")
         total_request_time = time.monotonic() - start_time
-        # TODO
-        breakpoint()
-        tokens_received = 0
+
+        tokens_received = get_token_length(generated_text)
         output_throughput = tokens_received / total_request_time
         metrics[common_metrics.INTER_TOKEN_LAT] = (
             total_request_time - ttft

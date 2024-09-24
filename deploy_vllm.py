@@ -28,7 +28,9 @@ class DeployVllm:
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_id, token=self.access_token, torch_dtype=bfloat16
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, token=self.access_token)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.model_id, token=self.access_token
+        )
 
     @fastapi_app.post("/")
     def handle_request(self, prompt: str, max_length: int) -> StreamingResponse:
@@ -62,5 +64,6 @@ class DeployVllm:
                 # hasn't been generated yet. `await` here to yield control
                 # back to the event loop so other coroutines can run.
                 await asyncio.sleep(0.001)
+
 
 app = DeployVllm.bind("meta-llama/Meta-Llama-3.1-8B-Instruct")
