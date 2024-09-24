@@ -45,7 +45,6 @@ class LocalVLLMClient(LLMClient):
             first_token = True
             for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
                 generated_text += chunk
-                print(chunk, end="")
                 if first_token is True:
                     ttft = time.monotonic() - start_time
                     first_token = False
