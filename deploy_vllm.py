@@ -10,8 +10,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStream
 from torch import bfloat16
 from ray import serve
 
-logger = logging.getLogger("ray.serve")
-logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger("ray.serve").setLevel(logging.WARNING)
 
 fastapi_app = FastAPI()
 
