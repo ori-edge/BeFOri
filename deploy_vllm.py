@@ -10,7 +10,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStream
 from torch import bfloat16
 from ray import serve
 
-logger = logging.getLogger("ray.serve").setLevel(logging.WARNING)
+logger = logging.getLogger("ray.serve")
 
 fastapi_app = FastAPI()
 
@@ -56,7 +56,6 @@ class DeployVllm:
         while True:
             try:
                 for token in streamer:
-                    logger.info(f'Yielding token: "{token}"')
                     yield token
                 break
             except Empty:
