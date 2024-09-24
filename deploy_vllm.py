@@ -11,6 +11,7 @@ from torch import bfloat16
 from ray import serve
 
 logger = logging.getLogger("ray.serve")
+logging.basicConfig(level=logging.WARNING)
 
 fastapi_app = FastAPI()
 
