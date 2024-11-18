@@ -554,7 +554,11 @@ def main():
         tik = time.time()
         os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
         model_dir = f"{output_dir}{args.model_name}/"
-        AutoModelForCausalLM.from_pretrained(model=args.model_name, token=os.environ.get("HF_ACCESS_TOKEN"), cache_dir=model_dir)
+        AutoModelForCausalLM.from_pretrained(
+            pretrained_model_name_or_path=args.model_name,  # Correct positional argument
+            use_auth_token=os.environ.get("HF_ACCESS_TOKEN"),  # Use correct argument for authentication
+            cache_dir=model_dir  # Specify cache directory
+        )
         tok = time.time()
         t = time.strftime('%H:%M:%S', time.gmtime(tok - tik))
         print(f'Total time to download model: {t}')
