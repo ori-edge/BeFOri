@@ -1,7 +1,6 @@
 import argparse
 import json
 import os
-import tensorrt as trt
 import tensorrt_llm
 import time
 import traceback
@@ -365,7 +364,7 @@ def args_to_build_options(args):
 def from_cli_args(args):
     n_kv_head = args.n_kv_head if args.n_kv_head is not None else args.n_head
     config = {
-        'architecture': "LlamaForCausalLM",
+        'architectures': ["LlamaForCausalLM"],
         'dtype': args.dtype,
         'logits_dtype': 'float32',
         'num_hidden_layers': args.n_layer,
