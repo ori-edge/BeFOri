@@ -364,14 +364,9 @@ def args_to_build_options(args):
 
 def from_cli_args(args):
     n_kv_head = args.n_kv_head if args.n_kv_head is not None else args.n_head
-    dtype_mapping_trt = {
-        "float16": trt.float16,
-        "float32": trt.float32,
-        "int8": trt.int8,
-    }
     config = {
         'architecture': "LlamaForCausalLM",
-        'dtype': dtype_mapping_trt.get(args.dtype.lower(), trt.float32),
+        'dtype': args.dtype,
         'logits_dtype': 'float32',
         'num_hidden_layers': args.n_layer,
         'num_attention_heads': args.n_head,
