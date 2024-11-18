@@ -6,7 +6,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from transformers import AutoConfig, AutoModelForCausalLM
+from transformers import AutoConfig, AutoModelForCausalLM, PretrainedConfig
 from tensorrt_llm import _utils, layers, models
 from tensorrt_llm.logger import logger
 from tensorrt_llm.mapping import Mapping
@@ -395,10 +395,11 @@ def from_cli_args(args):
         'quantization': args_to_quant_config(args).to_dict()
     }
     config.update(args_to_build_options(args))
+    config = PretrainedConfig(**config)
     return config
 
 
-def convert_and_save_hf(args, model_dir):
+def convert_and_save_hf(args, model_dir, config):
     load_by_shard = args.load_by_shard
     world_size = args.tp_size * args.pp_size
     # Need to convert the cli args to the kay-value pairs and override them in the generate config dict.
@@ -450,6 +451,7 @@ def convert_and_save_hf(args, model_dir):
             llama = models.LLaMAForCausalLM.from_hugging_face(
                 model_dir,
                 args.dtype,
+                hf_config_or_dir=config,
                 mapping=mapping,
                 quant_config=quant_config,
                 load_by_shard=load_by_shard,
@@ -543,7 +545,7 @@ def main():
     config = from_cli_args(args)
     with open(os.path.join(args.output_dir, 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
-    convert_and_save_hf(args, model_dir=model_dir)
+    convert_and_save_hf(args, model_dir=model_dir, config=config)
 
     tok = time.time()
     t = time.strftime('%H:%M:%S', time.gmtime(tok - tik))
