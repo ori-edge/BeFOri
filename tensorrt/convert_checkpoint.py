@@ -8,7 +8,8 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from transformers import AutoConfig, AutoModelForCausalLM
-from tensorrt_llm import _utils, layers, logger, models
+from tensorrt_llm import _utils, layers, models
+from tensorrt_llm.logger import logger
 from tensorrt_llm.mapping import Mapping
 from tensorrt_llm.models.modeling_utils import QuantConfig
 from tensorrt_llm.quantization import QuantAlgo
@@ -339,7 +340,7 @@ def update_quant_config_from_hf(quant_config, hf_config) -> QuantConfig:
         # update the quant_algo, and clamp_val.
         if hf_config_dict['quantization_config'].get(
                 'quant_method') == 'fbgemm_fp8':
-            logger.logger.info(
+            logger.info(
                 "Load quantization configs from huggingface model_config.")
             quant_config.quant_algo = QuantAlgo.FP8_PER_CHANNEL_PER_TOKEN
             activation_scale_ub = hf_config_dict['quantization_config'].get(
@@ -437,7 +438,7 @@ def convert_and_save_hf(args, model_dir):
         quant_config = update_quant_config_from_hf(quant_config, hf_config)
     except:
         # llava_llama needs its own defined config.
-        logger.logger.warning("AutoConfig cannot load the huggingface config.")
+        logger.warning("AutoConfig cannot load the huggingface config.")
 
     if args.smoothquant is not None or args.int8_kv_cache:
         assert not args.load_by_shard, "When using quantization, TRT-LLM needs to load the whole HF model, thus load by shard not supported"
@@ -511,7 +512,7 @@ def execute(workers, func, args):
 def main():
     print(tensorrt_llm.__version__)
     args = parse_arguments()
-    logger.logger.set_level(args.log_level)
+    logger.set_level(args.log_level)
 
     world_size = args.tp_size * args.pp_size
     if (args.moe_tp_size == -1 and args.moe_ep_size == -1):
