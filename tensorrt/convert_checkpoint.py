@@ -56,8 +56,8 @@ def parse_arguments():
         default="auto",
         choices=["auto", "float16", "bfloat16", "float32"],
         help="The data type for the model weights and activations if not quantized. "
-        "If 'auto', the data type is automatically inferred from the source model; "
-        "however, if the source dtype is float32, it is converted to float16.",
+             "If 'auto', the data type is automatically inferred from the source model; "
+             "however, if the source dtype is float32, it is converted to float16.",
     )
     parser.add_argument("--vocab_size", type=int, default=32000)
     parser.add_argument("--n_positions", type=int, default=2048)
@@ -75,14 +75,14 @@ def parse_arguments():
         default=False,
         action="store_true",
         help="Quantize weights for the various GEMMs to INT4/INT8."
-        "See --weight_only_precision to set the precision",
+             "See --weight_only_precision to set the precision",
     )
     parser.add_argument(
         "--disable_weight_only_quant_plugin",
         default=False,
         action="store_true",
         help="By default, using plugin implementation for weight quantization. Enabling disable_weight_only_quant_plugin flag will use ootb implementation instead of plugin."
-        "You must also use --use_weight_only for that argument to have an impact.",
+             "You must also use --use_weight_only for that argument to have an impact.",
     )
     parser.add_argument(
         "--weight_only_precision",
@@ -92,7 +92,7 @@ def parse_arguments():
         default="int8",
         choices=["int8", "int4", "int8_gptq", "int4_gptq", "int4_awq"],
         help="Define the precision for the weights when using weight-only quantization."
-        "You must also use --use_weight_only for that argument to have an impact.",
+             "You must also use --use_weight_only for that argument to have an impact.",
     )
     parser.add_argument(
         "--calib_dataset",
@@ -118,8 +118,8 @@ def parse_arguments():
         type=float,
         default=None,
         help="Set the α parameter (see https://arxiv.org/pdf/2211.10438.pdf)"
-        " to Smoothquant the model, and output int8 weights."
-        " A good first try is 0.5. Must be in [0, 1]",
+             " to Smoothquant the model, and output int8 weights."
+             " A good first try is 0.5. Must be in [0, 1]",
     )
     parser.add_argument(
         "--use_qserve",
@@ -132,16 +132,16 @@ def parse_arguments():
         action="store_true",
         default=False,
         help="By default, we use a single static scaling factor for the GEMM's result. "
-        "per_channel instead uses a different static scaling factor for each channel. "
-        "The latter is usually more accurate, but a little slower.",
+             "per_channel instead uses a different static scaling factor for each channel. "
+             "The latter is usually more accurate, but a little slower.",
     )
     parser.add_argument(
         "--per_token",
         action="store_true",
         default=False,
         help="By default, we use a single static scaling factor to scale activations in the int8 range. "
-        "per_token chooses at run time, and for each token, a custom scaling factor. "
-        "The latter is usually more accurate, but a little slower.",
+             "per_token chooses at run time, and for each token, a custom scaling factor. "
+             "The latter is usually more accurate, but a little slower.",
     )
     parser.add_argument(
         "--int8_kv_cache",
@@ -178,8 +178,8 @@ def parse_arguments():
         action="store_true",
         default=False,
         help="Enable Meta's LLaMA 3.1 recipe for Fp8 per-token per-channel quantization. "
-        "This skips quantization for the first and last Transformer layers and all the Attention layers. "
-        "This option is effective only if use_fp8_rowwise is enabled.",
+             "This skips quantization for the first and last Transformer layers and all the Attention layers. "
+             "This option is effective only if use_fp8_rowwise is enabled.",
     )
 
     parser.add_argument(
@@ -187,9 +187,9 @@ def parse_arguments():
         default=False,
         action="store_true",
         help="By default, we use a single static scaling factor to scale weights in the int4 range. "
-        "per_group chooses at run time, and for each group, a custom scaling factor. "
-        "The flag is built for GPTQ/AWQ quantization."
-        "If --use_qserve is enabled, this option also decides whether we use per-group or per-channel version of QServe",
+             "per_group chooses at run time, and for each group, a custom scaling factor. "
+             "The flag is built for GPTQ/AWQ quantization."
+             "If --use_qserve is enabled, this option also decides whether we use per-group or per-channel version of QServe",
     )
 
     parser.add_argument(
@@ -221,15 +221,15 @@ def parse_arguments():
         default=0,
         choices=[0, 1],
         help="By default the embedding lookup table is sharded along vocab dimension (embedding_sharding_dim=0). "
-        "To shard it along hidden dimension, set embedding_sharding_dim=1"
-        "Note: embedding sharing is only enabled when embedding_sharding_dim = 0",
+             "To shard it along hidden dimension, set embedding_sharding_dim=1"
+             "Note: embedding sharing is only enabled when embedding_sharding_dim = 0",
     )
     parser.add_argument(
         "--use_embedding_sharing",
         action="store_true",
         default=False,
         help="Try to reduce the engine size by sharing the embedding lookup table between two layers."
-        "Note: the flag might not take effect when the criteria are not met.",
+             "Note: the flag might not take effect when the criteria are not met.",
     )
     parser.add_argument(
         "--output_dir",
@@ -364,26 +364,6 @@ def update_quant_config_from_hf(quant_config, hf_config) -> QuantConfig:
     return quant_config
 
 
-def convert_and_save_meta(args, rank):
-    mapping = Mapping(
-        world_size=args.tp_size * args.pp_size,
-        tp_size=args.tp_size,
-        pp_size=args.pp_size,
-        moe_tp_size=args.moe_tp_size,
-        moe_ep_size=args.moe_ep_size,
-        rank=rank,
-    )
-    llama = LLaMAForCausalLM.from_meta_ckpt(
-        args.meta_ckpt_dir,
-        args.dtype,
-        quant_config=args_to_quant_config(args),
-        mapping=mapping,
-        use_parallel_embedding=args.use_parallel_embedding,
-        embedding_sharding_dim=args.embedding_sharding_dim,
-    )
-    llama.save_checkpoint(args.output_dir, save_config=(rank == 0))
-
-
 def args_to_build_options(args):
     return {
         "use_parallel_embedding": args.use_parallel_embedding,
@@ -394,43 +374,6 @@ def args_to_build_options(args):
         "quant_ckpt_path": args.quant_ckpt_path,
         "load_model_on_cpu": args.load_model_on_cpu,
     }
-
-
-def from_cli_args(args):
-    n_kv_head = args.n_kv_head if args.n_kv_head is not None else args.n_head
-    config = {
-        "architecture": "LlamaForCausalLM",
-        "dtype": infer_dtype(args.dtype),
-        "logits_dtype": "float32",
-        "num_hidden_layers": args.n_layer,
-        "num_attention_heads": args.n_head,
-        "hidden_size": args.n_embd,
-        "intermediate_size": args.inter_size,
-        "ffn_dim_multiplier": args.ffn_dim_multiplier,
-        "multiple_of": args.multiple_of,
-        "num_key_value_heads": n_kv_head,
-        "vocab_size": args.vocab_size,
-        "position_embedding_type": "rope_gpt_neox",
-        "max_position_embeddings": args.n_positions,
-        "hidden_act": args.hidden_act,
-        "rotary_base": args.rotary_base,
-        "norm_epsilon": args.rms_norm_eps,
-        "moe": {
-            "num_experts": args.moe_num_experts,
-            "top_k": args.moe_top_k,
-            "normalization_mode": args.moe_renorm_mode,
-        },
-        "mapping": {
-            "world_size": args.tp_size * args.pp_size,
-            "tp_size": args.tp_size,
-            "pp_size": args.pp_size,
-            "moe_tp_size": args.moe_tp_size,
-            "moe_ep_size": args.moe_ep_size,
-        },
-        "quantization": args_to_quant_config(args).to_dict(),
-    }
-    config.update(args_to_build_options(args))
-    return config
 
 
 def convert_and_save_hf(args):
@@ -497,11 +440,11 @@ def convert_and_save_hf(args):
                 load_by_shard=load_by_shard,
                 **override_fields,
             )
-            print(f"Total time of reading and converting: {time.time()-tik:.3f} s")
+            print(f"Total time of reading and converting: {time.time() - tik:.3f} s")
             tik = time.time()
             llama.save_checkpoint(args.output_dir, save_config=(rank == 0))
             del llama
-            print(f"Total time of saving checkpoint: {time.time()-tik:.3f} s")
+            print(f"Total time of saving checkpoint: {time.time() - tik:.3f} s")
 
         execute(args.workers, [convert_and_save_rank] * world_size, args)
         release_gc()
@@ -522,7 +465,7 @@ def execute(workers, func, args):
                     traceback.print_exc()
                     exceptions.append(e)
             assert (
-                len(exceptions) == 0
+                    len(exceptions) == 0
             ), "Checkpoint conversion failed, please check error log."
 
 
@@ -541,31 +484,26 @@ def main():
     elif args.moe_ep_size == -1:
         args.moe_ep_size = args.tp_size // args.moe_tp_size
     assert (
-        args.moe_tp_size * args.moe_ep_size == args.tp_size
+            args.moe_tp_size * args.moe_ep_size == args.tp_size
     ), "moe_tp_size * moe_ep_size must equal to tp_size"
     tik = time.time()
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
-    if (
-        args.model_dir is None
-        and args.meta_ckpt_dir is None
-        and args.model_name is None
-    ):  # generate fake config.json
-        config = from_cli_args(args)
-        with open(os.path.join(args.output_dir, "config.json"), "w") as f:
-            json.dump(config, f, indent=4)
-    elif args.meta_ckpt_dir is not None:
-        assert (
-            args.model_dir is None
-        ), "Shall not specify both meta checkpoint dir and hugging face dir"
-        execute(args.workers, [convert_and_save_meta] * world_size, args)
-    elif args.model_name is not None:
+    assert (args.model_dir is not None or args.model_name is not None), """
+        Must pass one of:
+         --model_dir with the path where the model snapshot is saved
+           e.g. '~/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659/
+         --model_name with the model name on HuggingFace
+           e.g. 'meta-llama/Llama-3.1-8B-Instruct'  
+        """
+
+    if args.model_name is not None:
         tik = time.time()
         os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
         model_dir = f"{args.output_dir}{args.model_name}/"
-        model = AutoModelForCausalLM.from_pretrained(
+        AutoModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path=args.model_name,  # Correct positional argument
             use_auth_token=os.environ.get(
                 "HF_ACCESS_TOKEN"
@@ -578,12 +516,12 @@ def main():
     else:  # all other paths from hf model
         assert args.model_dir is not None
         assert (
-            args.quant_ckpt_path is not None
-            and (
-                args.weight_only_precision in {"int4_gptq", "int8_gptq"}
-                or args.use_qserve
-            )
-        ) or args.quant_ckpt_path is None, (
+                       args.quant_ckpt_path is not None
+                       and (
+                               args.weight_only_precision in {"int4_gptq", "int8_gptq"}
+                               or args.use_qserve
+                       )
+               ) or args.quant_ckpt_path is None, (
             "only gptq weights or qserve need this option"
         )
         convert_and_save_hf(args)
