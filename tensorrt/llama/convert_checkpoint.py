@@ -525,9 +525,20 @@ def main():
             "only gptq weights or qserve need this option"
         )
         convert_and_save_hf(args)
+    snapshot_dir = args.output_dir
     for root, dirs, files in os.walk(args.output_dir):
         if root.endswith("snapshots"):
+            snapshot_dir = root
             break
+    import glob
+    file_name = f"{snapshot_dir}/**/config.json"
+    matching_file = glob.glob(file_name, recursive=True)[0]
+    with open(matching_file, 'r') as f:
+        data = json.load(f)
+    if "architecture" not in data.keys() and "architectures" in data.keys():
+        data.update({"architecture": data["architectures"][0]})
+        with open(matching_file, 'w') as f:
+            json.dump(data, f, indent=4)
     tok = time.time()
     t = time.strftime("%H:%M:%S", time.gmtime(tok - tik))
     print(f"Total time to converting checkpoints: {t}")
