@@ -1,19 +1,18 @@
 import argparse
 import json
 import os
+import tensorrt as trt
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from transformers import AutoConfig, AutoModelForCausalLM
-from huggingface_hub import hf_hub_download
 
 from tensorrt_llm._utils import release_gc
 from tensorrt_llm.layers import MoeConfig
 from tensorrt_llm.logger import logger
 from tensorrt_llm.mapping import Mapping
 from tensorrt_llm.models import LLaMAForCausalLM
-from tensorrt_llm.models.convert_utils import infer_dtype
 from tensorrt_llm.models.modeling_utils import QuantConfig
 from tensorrt_llm.quantization import QuantAlgo
 
@@ -383,9 +382,14 @@ def args_to_build_options(args):
 
 def from_cli_args(args):
     n_kv_head = args.n_kv_head if args.n_kv_head is not None else args.n_head
+    dtype_mapping_trt = {
+        "float16": trt.float16,
+        "float32": trt.float32,
+        "int8": trt.int8,
+    }
     config = {
         'architecture': "LlamaForCausalLM",
-        'dtype': infer_dtype(args.dtype),
+        'dtype': dtype_mapping_trt.get(args.dtype.lower(), trt.float32),
         'logits_dtype': 'float32',
         'num_hidden_layers': args.n_layer,
         'num_attention_heads': args.n_head,
