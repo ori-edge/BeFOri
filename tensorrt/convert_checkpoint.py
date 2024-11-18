@@ -528,7 +528,7 @@ def main():
 
     # Create output directory if it does not exist
     output_dir = args.output_dir
-    if not output_dir.endsin("/"):
+    if not output_dir.endswith("/"):
         output_dir += "/"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
