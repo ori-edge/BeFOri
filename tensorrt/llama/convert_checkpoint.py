@@ -445,7 +445,7 @@ def convert_and_save_hf(args):
             llama.save_checkpoint(args.output_dir, save_config=(rank == 0))
             del llama
             print(f"Total time of saving checkpoint: {time.time() - tik:.3f} s")
-
+            breakpoint()
         execute(args.workers, [convert_and_save_rank] * world_size, args)
         release_gc()
 
@@ -525,7 +525,9 @@ def main():
             "only gptq weights or qserve need this option"
         )
         convert_and_save_hf(args)
-
+    for root, dirs, files in os.walk(args.output_dir):
+        if root.endswith("snapshots"):
+            break
     tok = time.time()
     t = time.strftime("%H:%M:%S", time.gmtime(tok - tik))
     print(f"Total time to converting checkpoints: {t}")
