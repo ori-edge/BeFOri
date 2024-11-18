@@ -1,36 +1,23 @@
-
-# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import argparse
 import ast
 import csv
-import os
-from pathlib import Path
-from typing import List, Optional
 
 import numpy as np
-import torch
-from utils import (DEFAULT_HF_MODEL_DIRS, DEFAULT_PROMPT_TEMPLATES,
-                   add_common_args, load_tokenizer, read_model_name, throttle_generator)
 
 import tensorrt_llm
 import tensorrt_llm.profiler
 from tensorrt_llm.logger import logger
 from tensorrt_llm.runtime import PYTHON_BINDINGS, ModelRunner
+import json
+import os
+from pathlib import Path
+from typing import List, Optional
 
+import torch
+from transformers import AutoTokenizer, LlamaTokenizer, T5Tokenizer
+
+from tensorrt_llm._utils import supports_inflight_batching  # noqa
+from tensorrt_llm.builder import get_engine_version
 
 def parse_arguments(args=None):
     # see `add_common_args` for extended list of arguments
@@ -91,11 +78,224 @@ def parse_arguments(args=None):
                         type=str,
                         help='Numpy file where the cum_log_probs are stored',
                         default=None)
+    parser.add_argument('--num_beams',
+                        type=int,
+                        help="Use beam search if num_beams > 1",
+                        default=1)
+    parser.add_argument('--num_return_sequences',
+                        type=int,
+                        help="Number of sequences to generate for each input.",
+                        default=None)
+    parser.add_argument('--temperature', type=float, default=1.0)
+    parser.add_argument('--top_k', type=int, default=1)
+    parser.add_argument('--top_p', type=float, default=0.0)
+    parser.add_argument('--length_penalty', type=float, default=1.0)
+    parser.add_argument('--repetition_penalty', type=float, default=1.0)
+    parser.add_argument('--presence_penalty', type=float, default=0.0)
+    parser.add_argument('--frequency_penalty', type=float, default=0.0)
+    parser.add_argument('--beam_search_diversity_rate', type=float, default=0.0)
+    parser.add_argument('--random_seed', type=int, default=0)
+    parser.add_argument('--early_stopping',
+                        type=int,
+                        help='Use early stopping if num_beams > 1, '
+                             '1 for early-stopping, 0 for non-early-stopping'
+                             'other values for stopping by length',
+                        default=1)
     parser.add_argument(
-        '--run_profiling',
-        default=False,
+        '--end_id',
+        default=None,
+        type=int,
+        help="Override tokenizer end_id to stop on given end_id token.")
+    parser.add_argument(
+        '--stop_words',
+        default=None,
+        type=str,
+        nargs="+",
+        action='append',
+        help=
+        'Set stop words for a batch. Successive invocations of --stop_words set stop words for other batches.'
+        '    E.g.: --stop_words " London" " chef" --stop_words "eventually became" "was not"',
+    )
+    parser.add_argument(
+        '--bad_words',
+        default=None,
+        type=str,
+        nargs="+",
+        action='append',
+        help=
+        'Set bad words for a batch. Successive invocations of --bad_words set bad words for other batches.'
+        '    E.g.: --bad_words " London" " chef" --bad_words "eventually became" "was not"',
+    )
+    parser.add_argument('--no_repeat_ngram_size', type=int, default=None)
+
+    # common runtime arguments
+    parser.add_argument('--sink_token_length',
+                        type=int,
+                        default=None,
+                        help='The sink token length.')
+    parser.add_argument(
+        '--max_attention_window_size',
+        type=int,
+        default=None,
+        nargs="+",
+        help=
+        'The attention window size that controls the sliding window attention / cyclic kv cache behavior'
+    )
+    parser.add_argument(
+        '--multi_block_mode',
+        type=lambda s: s.lower() in
+                       ("yes", "true", "t", "1"
+                        ),  # custom boolean function to convert input string to boolean
+        default=True,
+        help=
+        "Distribute the work across multiple CUDA thread-blocks on the GPU for masked MHA kernel."
+    )
+    parser.add_argument('--enable_context_fmha_fp32_acc',
+                        action='store_true',
+                        help="Enable FMHA runner FP32 accumulation.")
+    parser.add_argument('--cuda_graph_mode',
+                        action='store_true',
+                        help="Enable cuda graphs in the inference.")
+    parser.add_argument(
+        '--log_level',
+        type=str,
+        choices=['verbose', 'info', 'warning', 'error', 'internal_error'],
+        default='info')
+    parser.add_argument('--debug_mode',
+                        default=False,
+                        action='store_true',
+                        help="Whether or not to turn on the debug mode")
+    parser.add_argument('--streaming', default=False, action='store_true')
+    parser.add_argument('--streaming_interval',
+                        type=int,
+                        help="How often to return tokens when streaming.",
+                        default=5)
+    parser.add_argument(
+        '--prompt_table_path',
+        type=str,
+        help="Path to .npy file, exported by nemo_prompt_convert.py")
+    parser.add_argument(
+        '--prompt_tasks',
+        help="Comma-separated list of tasks for prompt tuning, e.g., 0,3,1,0")
+    parser.add_argument('--lora_dir',
+                        type=str,
+                        default=None,
+                        nargs="+",
+                        help="The directory of LoRA weights")
+    parser.add_argument('--lora_ckpt_source',
+                        type=str,
+                        default="hf",
+                        choices=["hf", "nemo"],
+                        help="The source of lora checkpoint.")
+    parser.add_argument(
+        '--lora_task_uids',
+        type=str,
+        default=None,
+        nargs="+",
+        help="The list of LoRA task uids; use -1 to disable the LoRA module")
+    parser.add_argument(
+        '--num_prepend_vtokens',
+        nargs="+",
+        type=int,
+        help="Number of (default) virtual tokens to prepend to each sentence."
+             " For example, '--num_prepend_vtokens=10' will prepend the tokens"
+             " [vocab_size, vocab_size + 1, ..., vocab_size + 9] to the sentence.")
+    parser.add_argument(
+        '--draft_target_model_config',
+        type=str,
+        default=None,
+        help=
+        "Configuration of Draft-Target-Model decoding, see `examples/draft_target_model/README.md` for more information."
+        "   E.g.: [4, [0], [1], False] for [draft_len, draft_model_device_list, target_model_device_list, use_logits]."
+    )
+    parser.add_argument(
+        '--medusa_choices',
+        type=str,
+        default=None,
+        help="Configuration of Medusa decoding."
+             "   E.g.: [[0, 0, 0, 0], [0, 1, 0], [1, 0], [1, 1]] for 9 medusa tokens."
+    )
+    parser.add_argument(
+        '--lookahead_config',
+        type=str,
+        default=None,
+        help="Configuration of executor and request lookahead decoding."
+             "   E.g.: [5, 6, 7] for [max_window_size, max_ngram_size, max_verification_set_size]."
+    )
+    # model arguments
+    parser.add_argument('--engine_dir', type=str, default='engine_outputs')
+    parser.add_argument(
+        '--tokenizer_type',
+        help=
+        'Specify that argument when providing a .model file as the tokenizer_dir. '
+        'It allows AutoTokenizer to instantiate the correct tokenizer type.')
+    parser.add_argument('--vocab_file',
+                        help="Used for sentencepiece tokenizers")
+    parser.add_argument('--no_add_special_tokens',
+                        dest='add_special_tokens',
+                        default=True,
+                        action='store_false',
+                        help="Whether or not to add special tokens")
+    parser.add_argument('--hf_model_dir', '--model_dir', type=str, default=None)
+    parser.add_argument(
+        '--tokenizer_dir',
+        default=None,
+        help='tokenizer path; defaults to hf_model_dir if left unspecified')
+
+    # memory argument
+    parser.add_argument(
+        '--gpu_weights_percent',
+        default=1,
+        type=float,
+        help=
+        'Specify the percentage of weights that reside on GPU instead of CPU and streaming load during runtime.',
+    )
+    parser.add_argument(
+        '--max_tokens_in_paged_kv_cache',
+        default=None,
+        type=int,
+        help=
+        'Specify the maximum number of tokens in a kv cache page (only available with cpp session).',
+    )
+    parser.add_argument(
+        '--kv_cache_enable_block_reuse',
         action='store_true',
-        help="Run several 10 iterations to profile the inference latencies.")
+        help=
+        'Enables block reuse in kv cache (only available with cpp session).',
+    )
+    parser.add_argument(
+        '--kv_cache_free_gpu_memory_fraction',
+        default=0.9,
+        type=float,
+        help='Specify the free gpu memory fraction.',
+    )
+    parser.add_argument(
+        '--cross_kv_cache_fraction',
+        default=0.5,
+        type=float,
+        help=
+        'Specify the kv cache fraction reserved for cross attention. Only applicable for encoder-decoder models. By default 0.5 for self and 0.5 for cross.',
+    )
+    parser.add_argument(
+        '--enable_chunked_context',
+        action='store_true',
+        help='Enables chunked context (only available with cpp session).',
+    )
+
+    # hf model argument (if use hf model)
+    parser.add_argument(
+        '--hf_data_type',
+        '--data_type',
+        type=str,
+        choices=['fp32', 'fp16', 'bf16', 'float32', 'float16', 'bfloat16'],
+        default='fp16',
+        help="The data type for hf model.")
+    parser.add_argument(
+        '--hf_device_map_auto',
+        action='store_true',
+        help="Use device map 'auto' to load a pretrained HF model. This may "
+             "help to test a large model that cannot fit into a singlue GPU.")
+
     parser = add_common_args(parser)
 
     return parser.parse_args(args=args)
@@ -103,7 +303,6 @@ def parse_arguments(args=None):
 #KEEP
 def parse_input(tokenizer,
                 input_text=None,
-                prompt_template=None,
                 input_file=None,
                 add_special_tokens=True,
                 max_input_length=923,
@@ -120,8 +319,6 @@ def parse_input(tokenizer,
             batch_input_ids.append(tokenizer.prefix_tokens)
         else:
             for curr_text in input_text:
-                if prompt_template is not None:
-                    curr_text = prompt_template.format(input_text=curr_text)
                 input_ids = tokenizer.encode(
                     curr_text,
                     add_special_tokens=add_special_tokens,
@@ -202,6 +399,38 @@ def parse_input_token_extra_ids(prompt_table_path, kv_cache_enable_block_reuse,
         else:
             batch_extra_ids.append(input_token_extra_ids)
     return batch_extra_ids
+
+
+def load_tokenizer(model_name: Optional[str], tokenizer_dir: str = "../output/"):
+    # Load tokenizer if it's in the tokenizer_dir
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_dir)
+    except OSError as e:
+        tokenizer = AutoTokenizer.from_pretrained(model_name, token=os.environ.get("HF_ACCESS_TOKEN"), save_pretrained=tokenizer_dir)
+    tokenizer.add_special_tokens({'pad_token': '<|reserved_special_token_0|>'})
+    tokenizer.pad_token_id = 128002
+    pad_id = tokenizer.pad_token_id
+    end_id = tokenizer.eos_token_id
+    return tokenizer, pad_id, end_id
+
+
+def read_model_name(engine_dir: str):
+    engine_version = get_engine_version(engine_dir)
+
+    with open(Path(engine_dir) / "config.json", 'r') as f:
+        config = json.load(f)
+
+    if engine_version is None:
+        return config['builder_config']['name'], None
+
+    model_arch = config['pretrained_config']['architecture']
+    model_version = None
+    if 'GLM' in model_arch:
+        model_version = config['pretrained_config']['chatglm_version']
+    if 'qwen' in model_arch.lower():
+        model_version = config['pretrained_config']['qwen_type']
+    return model_arch, model_version
+
 
 #KEEP
 def print_output(tokenizer,
@@ -294,6 +523,19 @@ def print_output(tokenizer,
                                      dtype='float32')
         np.save(log_probs_file, log_probs_outputs)
 
+
+def throttle_generator(generator, stream_interval):
+    for i, out in enumerate(generator):
+        if i == 0:
+            # Always yield the first token
+            yield out
+        elif not i % stream_interval:
+            yield out
+    # Ensure last token(s) are yielded
+    if i % stream_interval:
+        yield out
+
+
 #KEEP
 def main(args):
     runtime_rank = tensorrt_llm.mpi_rank()
@@ -312,11 +554,7 @@ def main(args):
 
     model_name, model_version = read_model_name(args.engine_dir)
 
-    if args.tokenizer_dir is None and model_name in DEFAULT_HF_MODEL_DIRS:
-        logger.warning(
-            "tokenizer_dir is not specified. Try to infer from model_name, but this may be incorrect."
-        )
-        args.tokenizer_dir = DEFAULT_HF_MODEL_DIRS[model_name]
+    assert args.tokenizer_dir is not None, "Need to specify tokenizer_dir is not specified."
 
     tokenizer, pad_id, end_id = load_tokenizer(
         tokenizer_dir=args.tokenizer_dir,
@@ -329,13 +567,8 @@ def main(args):
     if args.end_id:
         end_id = args.end_id
 
-    prompt_template = None
-    if args.use_prompt_template and model_name in DEFAULT_PROMPT_TEMPLATES:
-        prompt_template = DEFAULT_PROMPT_TEMPLATES[model_name]
-
     batch_input_ids = parse_input(tokenizer=tokenizer,
                                   input_text=args.input_text,
-                                  prompt_template=prompt_template,
                                   input_file=args.input_file,
                                   add_special_tokens=args.add_special_tokens,
                                   max_input_length=args.max_input_length,
