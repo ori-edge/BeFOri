@@ -565,12 +565,7 @@ def main():
 
     tik = time.time()
 
-    if (args.model_dir is None
-            and args.meta_ckpt_dir is None):  # generate fake config.json
-        config = from_cli_args(args)
-        with open(os.path.join(output_dir, 'config.json'), 'w') as f:
-            json.dump(config, f, indent=4)
-    elif args.meta_ckpt_dir is not None:
+    if args.meta_ckpt_dir is not None:
         assert args.model_dir is None, "Shall not specify both meta checkpoint dir and hugging face dir"
         execute(args.workers, [convert_and_save_meta] * world_size, args)
     else:  # all other paths from hf model
