@@ -7,14 +7,9 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from transformers import AutoConfig, AutoModelForCausalLM
-
-from tensorrt_llm._utils import release_gc
-from tensorrt_llm.layers import MoeConfig
-from tensorrt_llm.logger import logger
+from tensorrt_llm import _utils, layers, logger, mapping, models, quantization
 from tensorrt_llm.mapping import Mapping
-from tensorrt_llm.models import LLaMAForCausalLM
-from tensorrt_llm.models.modeling_utils import QuantConfig
-from tensorrt_llm.quantization import QuantAlgo
+
 
 
 def parse_arguments():
@@ -244,7 +239,7 @@ def parse_arguments():
     )
     parser.add_argument(
         '--moe_renorm_mode',
-        default=MoeConfig.ExpertScaleNormalizationMode.RENORMALIZE,
+        default=layers.MoeConfig.ExpertScaleNormalizationMode.RENORMALIZE,
         type=int,
         help=
         'Controls renormalization after gate logits. Check layers/moe.py for accepted values',
@@ -272,16 +267,16 @@ def parse_arguments():
     return args
 
 
-def precision_to_config(precision, group_size, quant_config) -> QuantConfig:
+def precision_to_config(precision, group_size, quant_config) -> models.convert_utils.QuantConfig:
     '''update config dict for weight-only quantization
     '''
-    quant_config = QuantConfig()
+    quant_config = models.convert_utils.QuantConfig()
     precision_to_algo = {
-        'int8': QuantAlgo.W8A16,
-        'int4': QuantAlgo.W4A16,
-        'int8_gptq': QuantAlgo.W8A16_GPTQ,
-        'int4_gptq': QuantAlgo.W4A16_GPTQ,
-        'int4_awq': QuantAlgo.W4A16_AWQ
+        'int8': quantization.QuantAlgo.W8A16,
+        'int4': quantization.QuantAlgo.W4A16,
+        'int8_gptq': quantization.QuantAlgo.W8A16_GPTQ,
+        'int4_gptq': quantization.QuantAlgo.W4A16_GPTQ,
+        'int4_awq': quantization.QuantAlgo.W4A16_AWQ
     }
     quant_config.quant_algo = precision_to_algo.get(precision)
     if precision in {'int4_gptq', 'int8_gptq'}:
@@ -295,55 +290,55 @@ def precision_to_config(precision, group_size, quant_config) -> QuantConfig:
     return quant_config
 
 
-def args_to_quant_config(args: argparse.Namespace) -> QuantConfig:
+def args_to_quant_config(args: argparse.Namespace) -> models.convert_utils.QuantConfig:
     '''return config dict with quantization info based on the command line args
     '''
-    quant_config = QuantConfig()
+    quant_config = models.convert_utils.QuantConfig()
     if args.use_weight_only:
         quant_config = precision_to_config(args.weight_only_precision,
                                            args.group_size, quant_config)
     elif args.use_fp8:
-        quant_config.quant_algo = QuantAlgo.FP8
+        quant_config.quant_algo = quantization.QuantAlgo.FP8
     elif args.smoothquant:
         quant_config.smoothquant_val = args.smoothquant
         if args.per_channel:
             if args.per_token:
-                quant_config.quant_algo = QuantAlgo.W8A8_SQ_PER_CHANNEL_PER_TOKEN_PLUGIN
+                quant_config.quant_algo = quantization.QuantAlgo.W8A8_SQ_PER_CHANNEL_PER_TOKEN_PLUGIN
             else:
-                quant_config.quant_algo = QuantAlgo.W8A8_SQ_PER_CHANNEL_PER_TENSOR_PLUGIN
+                quant_config.quant_algo = quantization.QuantAlgo.W8A8_SQ_PER_CHANNEL_PER_TENSOR_PLUGIN
         else:
             if args.per_token:
-                quant_config.quant_algo = QuantAlgo.W8A8_SQ_PER_TENSOR_PER_TOKEN_PLUGIN
+                quant_config.quant_algo = quantization.QuantAlgo.W8A8_SQ_PER_TENSOR_PER_TOKEN_PLUGIN
             else:
-                quant_config.quant_algo = QuantAlgo.W8A8_SQ_PER_TENSOR_PLUGIN
+                quant_config.quant_algo = quantization.QuantAlgo.W8A8_SQ_PER_TENSOR_PLUGIN
     elif args.use_fp8_rowwise:
-        quant_config.quant_algo = QuantAlgo.FP8_PER_CHANNEL_PER_TOKEN
+        quant_config.quant_algo = quantization.QuantAlgo.FP8_PER_CHANNEL_PER_TOKEN
         # this will be overwritten if specified in the hf config.
         quant_config.clamp_val = [-1200.0, 1200.0]
 
     elif args.use_qserve:
-        quant_config.quant_algo = QuantAlgo.W4A8_QSERVE_PER_GROUP if args.per_group else QuantAlgo.W4A8_QSERVE_PER_CHANNEL
+        quant_config.quant_algo = quantization.QuantAlgo.W4A8_QSERVE_PER_GROUP if args.per_group else quantization.QuantAlgo.W4A8_QSERVE_PER_CHANNEL
 
     quant_config.use_meta_recipe = args.use_meta_fp8_rowwise_recipe
 
     if args.int8_kv_cache:
-        quant_config.kv_cache_quant_algo = QuantAlgo.INT8
+        quant_config.kv_cache_quant_algo = quantization.QuantAlgo.INT8
 
     if args.fp8_kv_cache:
-        quant_config.kv_cache_quant_algo = QuantAlgo.FP8
+        quant_config.kv_cache_quant_algo = quantization.QuantAlgo.FP8
 
     return quant_config
 
 
-def update_quant_config_from_hf(quant_config, hf_config) -> QuantConfig:
+def update_quant_config_from_hf(quant_config, hf_config) -> models.convert_utils.QuantConfig:
     hf_config_dict = hf_config.to_dict()
     if hf_config_dict.get('quantization_config'):
         # update the quant_algo, and clamp_val.
         if hf_config_dict['quantization_config'].get(
                 'quant_method') == 'fbgemm_fp8':
-            logger.info(
+            logger.logger.info(
                 "Load quantization configs from huggingface model_config.")
-            quant_config.quant_algo = QuantAlgo.FP8_PER_CHANNEL_PER_TOKEN
+            quant_config.quant_algo = quantization.QuantAlgo.FP8_PER_CHANNEL_PER_TOKEN
             activation_scale_ub = hf_config_dict['quantization_config'].get(
                 'activation_scale_ub', 1200.0)
             quant_config.clamp_val = [-activation_scale_ub, activation_scale_ub]
@@ -357,7 +352,7 @@ def convert_and_save_meta(args, rank):
                       moe_tp_size=args.moe_tp_size,
                       moe_ep_size=args.moe_ep_size,
                       rank=rank)
-    llama = LLaMAForCausalLM.from_meta_ckpt(
+    llama = models.LLaMAForCausalLM.from_meta_ckpt(
         args.meta_ckpt_dir,
         args.dtype,
         quant_config=args_to_quant_config(args),
@@ -439,7 +434,7 @@ def convert_and_save_hf(args, model_dir):
         quant_config = update_quant_config_from_hf(quant_config, hf_config)
     except:
         # llava_llama needs its own defined config.
-        logger.warning("AutoConfig cannot load the huggingface config.")
+        logger.logger.warning("AutoConfig cannot load the huggingface config.")
 
     if args.smoothquant is not None or args.int8_kv_cache:
         assert not args.load_by_shard, "When using quantization, TRT-LLM needs to load the whole HF model, thus load by shard not supported"
@@ -449,7 +444,7 @@ def convert_and_save_hf(args, model_dir):
                           moe_tp_size=args.moe_tp_size,
                           moe_ep_size=args.moe_ep_size)
         # TODO: support moe quantization for tp + ep
-        LLaMAForCausalLM.quantize(
+        models.LLaMAForCausalLM.quantize(
             model_dir,
             args.output_dir,
             dtype=args.dtype,
@@ -471,7 +466,7 @@ def convert_and_save_hf(args, model_dir):
                               moe_tp_size=args.moe_tp_size,
                               moe_ep_size=args.moe_ep_size)
             tik = time.time()
-            llama = LLaMAForCausalLM.from_hugging_face(
+            llama = models.LLaMAForCausalLM.from_hugging_face(
                 model_dir,
                 args.dtype,
                 mapping=mapping,
@@ -488,7 +483,7 @@ def convert_and_save_hf(args, model_dir):
             print(f'Total time of saving checkpoint: {time.time()-tik:.3f} s')
 
         execute(args.workers, [convert_and_save_rank] * world_size, args)
-        release_gc()
+        _utils.release_gc()
 
 
 def execute(workers, func, args):
@@ -513,7 +508,7 @@ def execute(workers, func, args):
 def main():
     print(tensorrt_llm.__version__)
     args = parse_arguments()
-    logger.set_level(args.log_level)
+    logger.logger.set_level(args.log_level)
 
     world_size = args.tp_size * args.pp_size
     if (args.moe_tp_size == -1 and args.moe_ep_size == -1):
