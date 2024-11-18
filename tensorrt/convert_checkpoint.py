@@ -20,6 +20,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_dir', type=str, default=None, help="The path where the model snapshot is saved, e.g. '~/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659/'")
     parser.add_argument('--model_name', type=str, default=None, help="The model name on HuggingFace, e.g. 'meta-llama/Llama-3.1-8B-Instruct'")
+    parser.add_argument('--meta_ckpt_dir', type=str, default=None)
     parser.add_argument('--tp_size',
                         type=int,
                         default=1,
