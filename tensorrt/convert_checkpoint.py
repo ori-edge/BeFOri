@@ -471,7 +471,7 @@ def convert_and_save_hf(args, model_dir):
                               moe_tp_size=args.moe_tp_size,
                               moe_ep_size=args.moe_ep_size)
             tik = time.time()
-            llama = modelsLLaMAForCausalLM.from_hugging_face(
+            llama = models.LLaMAForCausalLM.from_hugging_face(
                 model_dir,
                 args.dtype,
                 mapping=mapping,
