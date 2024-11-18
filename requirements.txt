@@ -151,7 +151,7 @@ tensorrt==10.5.0
 tensorrt-cu12==10.5.0
 tensorrt-cu12-bindings==10.5.0
 tensorrt-cu12-libs==10.5.0
-tensorrt_llm==0.15.0.dev2024110500
+tensorrt_llm==0.15.0.dev2024111200
 tiktoken==0.8.0
 tokenizers==0.20.2
 tomli==2.0.2
