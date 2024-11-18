@@ -20,7 +20,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_dir', type=str, default=None, help="The path where the model snapshot is saved, e.g. '~/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659/'")
     parser.add_argument('--model_name', type=str, default=None, help="The model name on HuggingFace, e.g. 'meta-llama/Llama-3.1-8B-Instruct'")
-    parser.add_argument('--meta_ckpt_dir', type=str, default=None)
     parser.add_argument('--tp_size',
                         type=int,
                         default=1,
@@ -350,23 +349,6 @@ def update_quant_config_from_hf(quant_config, hf_config) -> QuantConfig:
     return quant_config
 
 
-def convert_and_save_meta(args, rank):
-    mapping = Mapping(world_size=args.tp_size * args.pp_size,
-                      tp_size=args.tp_size,
-                      pp_size=args.pp_size,
-                      moe_tp_size=args.moe_tp_size,
-                      moe_ep_size=args.moe_ep_size,
-                      rank=rank)
-    llama = models.LLaMAForCausalLM.from_meta_ckpt(
-        args.meta_ckpt_dir,
-        args.dtype,
-        quant_config=args_to_quant_config(args),
-        mapping=mapping,
-        use_parallel_embedding=args.use_parallel_embedding,
-        embedding_sharding_dim=args.embedding_sharding_dim)
-    llama.save_checkpoint(args.output_dir, save_config=(rank == 0))
-
-
 def args_to_build_options(args):
     return {
         'use_parallel_embedding': args.use_parallel_embedding,
@@ -564,12 +546,10 @@ def main():
         print(f'Total time to download model: {t}')
 
     tik = time.time()
-
-    if args.meta_ckpt_dir is not None:
-        assert args.model_dir is None, "Shall not specify both meta checkpoint dir and hugging face dir"
-        execute(args.workers, [convert_and_save_meta] * world_size, args)
-    else:  # all other paths from hf model
-        convert_and_save_hf(args, model_dir=model_dir)
+    config = from_cli_args(args)
+    with open(os.path.join(args.output_dir, 'config.json'), 'w') as f:
+        json.dump(config, f, indent=4)
+    convert_and_save_hf(args, model_dir=model_dir)
 
     tok = time.time()
     t = time.strftime('%H:%M:%S', time.gmtime(tok - tik))
