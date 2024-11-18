@@ -448,9 +448,8 @@ def convert_and_save_hf(args, model_dir, config):
                               moe_ep_size=args.moe_ep_size)
             tik = time.time()
             llama = models.LLaMAForCausalLM.from_hugging_face(
-                model_dir,
+                config,
                 args.dtype,
-                hf_config_or_dir=config,
                 mapping=mapping,
                 quant_config=quant_config,
                 load_by_shard=load_by_shard,
