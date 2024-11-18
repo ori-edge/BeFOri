@@ -545,7 +545,7 @@ def main():
     config = from_cli_args(args)
     with open(os.path.join(args.output_dir, 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
-    convert_and_save_hf(args, model_dir=model_dir, config=model)
+    convert_and_save_hf(args, model_dir=model_dir, model=model)
 
     tok = time.time()
     t = time.strftime('%H:%M:%S', time.gmtime(tok - tik))
