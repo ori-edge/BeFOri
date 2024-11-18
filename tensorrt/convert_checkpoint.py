@@ -6,7 +6,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from transformers import AutoConfig, AutoModelForCausalLM, LlamaConfig
+from transformers import AutoConfig, AutoModelForCausalLM, PretrainedConfig
 from tensorrt_llm import _utils, layers, models
 from tensorrt_llm.logger import logger
 from tensorrt_llm.mapping import Mapping
@@ -392,7 +392,8 @@ def from_cli_args(args):
             'moe_tp_size': args.moe_tp_size,
             'moe_ep_size': args.moe_ep_size,
         },
-        'quantization': args_to_quant_config(args).to_dict()
+        'quantization': args_to_quant_config(args).to_dict(),
+        'rms_norm_eps': '1e-06'
     }
     config.update(args_to_build_options(args))
     return config
@@ -543,7 +544,7 @@ def main():
     config = from_cli_args(args)
     with open(os.path.join(args.output_dir, 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
-    config = LlamaConfig(**config)
+    config = PretrainedConfig(**config)
     convert_and_save_hf(args, model_dir=model_dir, config=config)
 
     tok = time.time()
