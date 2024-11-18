@@ -6,7 +6,7 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from transformers import AutoConfig, AutoModelForCausalLM, PretrainedConfig
+from transformers import AutoConfig, AutoModelForCausalLM, LlamaConfig
 from tensorrt_llm import _utils, layers, models
 from tensorrt_llm.logger import logger
 from tensorrt_llm.mapping import Mapping
@@ -543,7 +543,7 @@ def main():
     config = from_cli_args(args)
     with open(os.path.join(args.output_dir, 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
-    config = PretrainedConfig(**config)
+    config = LlamaConfig(**config)
     convert_and_save_hf(args, model_dir=model_dir, config=config)
 
     tok = time.time()
