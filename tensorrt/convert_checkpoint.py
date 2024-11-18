@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import tensorrt as trt
+import tensorrt_llm
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
