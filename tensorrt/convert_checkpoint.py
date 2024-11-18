@@ -395,7 +395,6 @@ def from_cli_args(args):
         'quantization': args_to_quant_config(args).to_dict()
     }
     config.update(args_to_build_options(args))
-    config = PretrainedConfig(**config)
     return config
 
 
@@ -545,6 +544,7 @@ def main():
     config = from_cli_args(args)
     with open(os.path.join(args.output_dir, 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
+    config = PretrainedConfig(**config)
     convert_and_save_hf(args, model_dir=model_dir, config=config)
 
     tok = time.time()
