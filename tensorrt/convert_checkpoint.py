@@ -399,7 +399,7 @@ def from_cli_args(args):
     return config
 
 
-def convert_and_save_hf(args, model_dir, config):
+def convert_and_save_hf(args, model_dir, model):
     load_by_shard = args.load_by_shard
     world_size = args.tp_size * args.pp_size
     # Need to convert the cli args to the kay-value pairs and override them in the generate config dict.
@@ -449,7 +449,7 @@ def convert_and_save_hf(args, model_dir, config):
                               moe_ep_size=args.moe_ep_size)
             tik = time.time()
             llama = models.LLaMAForCausalLM.from_hugging_face(
-                config,
+                model,
                 args.dtype,
                 mapping=mapping,
                 quant_config=quant_config,
@@ -511,14 +511,6 @@ def main():
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    assert (args.model_dir is not None or args.model_name is not None), """
-    Must pass one of:
-     --model_dir with the path where the model snapshot is saved
-       e.g. '~/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659/
-     --model_name with the model name on HuggingFace
-       e.g. 'meta-llama/Llama-3.1-8B-Instruct'  
-    """
-
     # Download model from hugging face if model snapshop is not provided
     model_dir = args.model_dir
     if model_dir is not None:
@@ -527,11 +519,12 @@ def main():
                        (args.weight_only_precision in {'int4_gptq', 'int8_gptq'}
                         or args.use_qserve)
                ) or args.quant_ckpt_path is None, "only gptq weights or qserve need this option"
+        model = AutoModelForCausalLM.from_pretrained(model_dir)
     elif args.model_name is not None:
         tik = time.time()
         os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
         model_dir = f"{output_dir}{args.model_name}/"
-        AutoModelForCausalLM.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path=args.model_name,  # Correct positional argument
             use_auth_token=os.environ.get("HF_ACCESS_TOKEN"),  # Use correct argument for authentication
             cache_dir=model_dir  # Specify cache directory
@@ -539,13 +532,20 @@ def main():
         tok = time.time()
         t = time.strftime('%H:%M:%S', time.gmtime(tok - tik))
         print(f'Total time to download model: {t}')
+    else:
+        logger.error("""
+        Must pass one of:
+         --model_dir with the path where the model snapshot is saved
+           e.g. '~/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659/
+         --model_name with the model name on HuggingFace
+           e.g. 'meta-llama/Llama-3.1-8B-Instruct'  
+        """)
 
     tik = time.time()
     config = from_cli_args(args)
     with open(os.path.join(args.output_dir, 'config.json'), 'w') as f:
         json.dump(config, f, indent=4)
-    config = PretrainedConfig(**config)
-    convert_and_save_hf(args, model_dir=model_dir, config=config)
+    convert_and_save_hf(args, model_dir=model_dir, config=model)
 
     tok = time.time()
     t = time.strftime('%H:%M:%S', time.gmtime(tok - tik))
