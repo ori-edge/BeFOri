@@ -26,7 +26,7 @@ from transformers import AutoTokenizer, LlamaTokenizer, T5Tokenizer
 from tensorrt_llm._utils import supports_inflight_batching  # noqa
 from tensorrt_llm._utils import str_dtype_to_torch
 from tensorrt_llm.builder import get_engine_version
-
+#KEEP
 DEFAULT_HF_MODEL_DIRS = {
     'BaichuanForCausalLM': 'baichuan-inc/Baichuan-13B-Chat',
     'BaiChuanForCausalLM': 'baichuan-inc/Baichuan-13B-Chat',
@@ -72,7 +72,7 @@ def read_decoder_start_token_id(engine_dir):
         config = json.load(f)
     return config['pretrained_config']['decoder_start_token_id']
 
-
+#KEEP
 def read_model_name(engine_dir: str):
     engine_version = get_engine_version(engine_dir)
 
@@ -90,16 +90,19 @@ def read_model_name(engine_dir: str):
         model_version = config['pretrained_config']['qwen_type']
     return model_arch, model_version
 
-
+#KEEP
 def throttle_generator(generator, stream_interval):
     for i, out in enumerate(generator):
-        if not i % stream_interval:
+        if i == 0:
+            # Always yield the first token
             yield out
-
+        elif not i % stream_interval:
+            yield out
+    # Ensure last token(s) are yielded
     if i % stream_interval:
         yield out
 
-
+#KEEP
 def load_tokenizer(tokenizer_dir: Optional[str] = None,
                    vocab_file: Optional[str] = None,
                    model_name: str = 'GPTForCausalLM',
@@ -158,7 +161,7 @@ def prepare_enc_dec_inputs(batch_input_ids: List[torch.Tensor], model_name: str,
         encoder_output_lengths = None
     return encoder_input_ids, encoder_input_features, encoder_output_lengths, decoder_input_ids
 
-
+#KEEP
 def add_common_args(parser):
     # sampling arguments
     parser.add_argument('--num_beams',
@@ -251,10 +254,6 @@ def add_common_args(parser):
         action='store_false',
         help=
         "Whether or not to use default prompt template to wrap the input text.")
-    parser.add_argument('--use_py_session',
-                        default=False,
-                        action='store_true',
-                        help="Whether or not to use Python runtime session")
     parser.add_argument('--debug_mode',
                         default=False,
                         action='store_true',
@@ -389,16 +388,5 @@ def add_common_args(parser):
         action='store_true',
         help="Use device map 'auto' to load a pretrained HF model. This may "
         "help to test a large model that cannot fit into a singlue GPU.")
-
-    parser.add_argument(
-        "--return_all_generated_tokens",
-        default=False,
-        action="store_true",
-        help="This option changes the token output only for streaming. "
-        "If not specified, return only generated tokens at each step. "
-        "If specified, return the full beams/outputs at each step. "
-        "It is automatically enabled for num_beams>1 (only available with cpp session). "
-        "WARNING: using this option may increase network usage significantly (quadratically w.r.t output length)."
-    )
 
     return parser
