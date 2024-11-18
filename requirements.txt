@@ -155,7 +155,7 @@ tensorrt_llm==0.15.0.dev2024111200
 tiktoken==0.8.0
 tokenizers==0.20.2
 tomli==2.0.2
-torch==2.4.1
+torch==2.5.1
 torchprofile==0.0.4
 torchvision==0.19.1
 tqdm==4.66.6
