@@ -535,10 +535,14 @@ def main():
     matching_file = glob.glob(file_name, recursive=True)[0]
     with open(matching_file, 'r') as f:
         data = json.load(f)
+    add_keys = {}
     if "architecture" not in data.keys() and "architectures" in data.keys():
-        data.update({"architecture": data["architectures"][0]})
-        with open(matching_file, 'w') as f:
-            json.dump(data, f, indent=4)
+        add_keys.update({"architecture": data["architectures"][0]})
+    if "dtype" not in data.keys():
+        add_keys.update({"dtype": "float32"})
+    data.update(add_keys)
+    with open(matching_file, 'w') as f:
+        json.dump(data, f, indent=4)
     tok = time.time()
     t = time.strftime("%H:%M:%S", time.gmtime(tok - tik))
     print(f"Total time to converting checkpoints: {t}")
