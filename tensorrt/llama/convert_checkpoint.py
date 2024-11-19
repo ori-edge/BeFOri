@@ -195,6 +195,7 @@ def parse_arguments():
     parser.add_argument(
         "--load_by_shard",
         action="store_true",
+        default=False,
         help="Load a pretrained model shard-by-shard.",
     )
     parser.add_argument("--hidden_act", type=str, default="silu")
