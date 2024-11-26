@@ -473,6 +473,7 @@ def main():
         tok = time.time()
         t = time.strftime("%H:%M:%S", time.gmtime(tok - tik))
         print(f"Total time to download model: {t}")
+        convert_and_save_hf(args)
     else:  # all other paths from hf model
         assert args.model_dir is not None
         assert (
