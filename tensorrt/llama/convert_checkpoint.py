@@ -4,6 +4,7 @@ import os
 import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
 
 from transformers import AutoConfig, AutoModelForCausalLM
 
@@ -376,8 +377,7 @@ def args_to_build_options(args):
     }
 
 
-def convert_and_save_hf(args):
-    model_dir = args.model_dir
+def convert_and_save_hf(args, model_dir: str):
     load_by_shard = args.load_by_shard
     world_size = args.tp_size * args.pp_size
     # Need to convert the cli args to the kay-value pairs and override them in the generate config dict.
@@ -512,7 +512,7 @@ def main():
         tok = time.time()
         t = time.strftime("%H:%M:%S", time.gmtime(tok - tik))
         print(f"Total time to download model: {t}")
-        convert_and_save_hf(args)
+        convert_and_save_hf(args, model_dir=model_dir)
     else:  # all other paths from hf model
         assert args.model_dir is not None
         assert (
@@ -524,7 +524,7 @@ def main():
                ) or args.quant_ckpt_path is None, (
             "only gptq weights or qserve need this option"
         )
-        convert_and_save_hf(args)
+        convert_and_save_hf(args, model_dir=args.model_dir)
     snapshot_dir = args.output_dir
     for root, dirs, files in os.walk(args.output_dir):
         if root.endswith("snapshots"):
