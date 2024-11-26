@@ -190,6 +190,13 @@ def parse_arguments():
              "The flag is built for GPTQ/AWQ quantization."
              "If --use_qserve is enabled, this option also decides whether we use per-group or per-channel version of QServe",
     )
+
+    parser.add_argument(
+        "--load_by_shard",
+        action="store_true",
+        default=False,
+        help="Load a pretrained model shard-by-shard.",
+    )
     parser.add_argument("--hidden_act", type=str, default="silu")
 
     parser.add_argument("--rotary_base", type=float, default=10000.0)
