@@ -16,6 +16,7 @@ from tensorrt_llm.models import LLaMAForCausalLM
 from tensorrt_llm.models.convert_utils import infer_dtype
 from tensorrt_llm.models.modeling_utils import QuantConfig
 from tensorrt_llm.quantization import QuantAlgo
+from torch import save
 
 
 def parse_arguments():
@@ -443,10 +444,13 @@ def convert_and_save_hf(args):
             )
             print(f"Total time of reading and converting: {time.time() - tik:.3f} s")
             tik = time.time()
-            llama.save_checkpoint(args.output_dir, save_config=(rank == 0))
+
+            weights = llama.state_dict()  # Retrieves all model parameters as a dictionary
+            save(weights, args.output_dir)
+            print(f"Weights saved to {args.output_dir}")
+            # llama.save_checkpoint(args.output_dir, save_config=(rank == 0))
             del llama
             print(f"Total time of saving checkpoint: {time.time() - tik:.3f} s")
-            breakpoint()
         execute(args.workers, [convert_and_save_rank] * world_size, args)
         release_gc()
 
