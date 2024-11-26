@@ -192,13 +192,6 @@ def parse_arguments():
              "The flag is built for GPTQ/AWQ quantization."
              "If --use_qserve is enabled, this option also decides whether we use per-group or per-channel version of QServe",
     )
-
-    parser.add_argument(
-        "--load_by_shard",
-        action="store_true",
-        default=False,
-        help="Load a pretrained model shard-by-shard.",
-    )
     parser.add_argument("--hidden_act", type=str, default="silu")
 
     parser.add_argument("--rotary_base", type=float, default=10000.0)
@@ -380,7 +373,6 @@ def args_to_build_options(args):
 
 def convert_and_save_hf(args):
     model_dir = args.model_dir
-    load_by_shard = args.load_by_shard
     world_size = args.tp_size * args.pp_size
     # Need to convert the cli args to the kay-value pairs and override them in the generate config dict.
     # Ideally these fields will be moved out of the config and pass them into build API, keep them here for compatibility purpose for now,
@@ -397,63 +389,26 @@ def convert_and_save_hf(args):
         # llava_llama needs its own defined config.
         logger.warning("AutoConfig cannot load the huggingface config.")
 
-    if args.smoothquant is not None or args.int8_kv_cache:
-        assert (
-            not args.load_by_shard
-        ), "When using quantization, TRT-LLM needs to load the whole HF model, thus load by shard not supported"
-        mapping = Mapping(
-            world_size=world_size,
-            tp_size=args.tp_size,
-            pp_size=args.pp_size,
-            moe_tp_size=args.moe_tp_size,
-            moe_ep_size=args.moe_ep_size,
-        )
-        # TODO: support moe quantization for tp + ep
-        LLaMAForCausalLM.quantize(
-            args.model_dir,
-            args.output_dir,
-            dtype=args.dtype,
-            mapping=mapping,
-            quant_config=quant_config,
-            device="cpu" if args.load_model_on_cpu else "cuda",
-            calib_dataset=args.calib_dataset,
-            calib_batches=args.calib_size,
-            calib_max_seq_length=args.calib_max_seq_length,
-            **override_fields,
-        )
-    else:
-        # When not loading by shard, preload one complete model and then slice per rank weights from this
-        # in order to save the disk reloading time
-        def convert_and_save_rank(args, rank):
-            mapping = Mapping(
-                world_size=world_size,
-                rank=rank,
-                tp_size=args.tp_size,
-                pp_size=args.pp_size,
-                moe_tp_size=args.moe_tp_size,
-                moe_ep_size=args.moe_ep_size,
-            )
-            tik = time.time()
-            llama = LLaMAForCausalLM.from_hugging_face(
-                model_dir,
-                args.dtype,
-                mapping=mapping,
-                quant_config=quant_config,
-                load_by_shard=load_by_shard,
-                **override_fields,
-            )
-            print(f"Total time of reading and converting: {time.time() - tik:.3f} s")
-            tik = time.time()
-
-            weights = llama.state_dict()  # Retrieves all model parameters as a dictionary
-            save(weights, args.output_dir)
-            print(f"Weights saved to {args.output_dir}")
-            # llama.save_checkpoint(args.output_dir, save_config=(rank == 0))
-            del llama
-            print(f"Total time of saving checkpoint: {time.time() - tik:.3f} s")
-        execute(args.workers, [convert_and_save_rank] * world_size, args)
-        release_gc()
-
+    mapping = Mapping(
+        world_size=world_size,
+        tp_size=args.tp_size,
+        pp_size=args.pp_size,
+        moe_tp_size=args.moe_tp_size,
+        moe_ep_size=args.moe_ep_size,
+    )
+    # TODO: support moe quantization for tp + ep
+    LLaMAForCausalLM.quantize(
+        args.model_dir,
+        args.output_dir,
+        dtype=args.dtype,
+        mapping=mapping,
+        quant_config=quant_config,
+        device="cpu" if args.load_model_on_cpu else "cuda",
+        calib_dataset=args.calib_dataset,
+        calib_batches=args.calib_size,
+        calib_max_seq_length=args.calib_max_seq_length,
+        **override_fields,
+    )
 
 def execute(workers, func, args):
     if workers == 1:
