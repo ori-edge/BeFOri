@@ -1,4 +1,5 @@
 import argparse
+import glob
 import json
 import os
 import time
@@ -432,6 +433,8 @@ def convert_and_save_hf(args, model_dir: str):
                 moe_ep_size=args.moe_ep_size,
             )
             tik = time.time()
+            if os.path.isdir(os.path.join(args.output_dir, 'snapshots')) or args.output_dir.endswith('snapshots'):
+                add_arch_to_config(snapshot_dir=args.output_dir)
             llama = LLaMAForCausalLM.from_hugging_face(
                 model_dir,
                 args.dtype,
@@ -467,6 +470,25 @@ def execute(workers, func, args):
                     len(exceptions) == 0
             ), "Checkpoint conversion failed, please check error log."
 
+
+def add_arch_to_config(snapshot_dir):
+    for root, dirs, files in os.walk(snapshot_dir):
+        if root.endswith("snapshots"):
+            snapshot_dir = root
+            break
+
+    file_name = f"{snapshot_dir}/**/config.json"
+    matching_file = glob.glob(file_name, recursive=True)[0]
+    with open(matching_file, 'r') as f:
+        data = json.load(f)
+    add_keys = {}
+    if "architecture" not in data.keys() and "architectures" in data.keys():
+        add_keys.update({"architecture": data["architectures"][0]})
+    if "dtype" not in data.keys():
+        add_keys.update({"dtype": "float32"})
+    data.update(add_keys)
+    with open(matching_file, 'w') as f:
+        json.dump(data, f, indent=4)
 
 def main():
     print(tensorrt_llm.__version__)
@@ -526,23 +548,7 @@ def main():
         )
         convert_and_save_hf(args, model_dir=args.model_dir)
     snapshot_dir = args.output_dir
-    for root, dirs, files in os.walk(args.output_dir):
-        if root.endswith("snapshots"):
-            snapshot_dir = root
-            break
-    import glob
-    file_name = f"{snapshot_dir}/**/config.json"
-    matching_file = glob.glob(file_name, recursive=True)[0]
-    with open(matching_file, 'r') as f:
-        data = json.load(f)
-    add_keys = {}
-    if "architecture" not in data.keys() and "architectures" in data.keys():
-        add_keys.update({"architecture": data["architectures"][0]})
-    if "dtype" not in data.keys():
-        add_keys.update({"dtype": "float32"})
-    data.update(add_keys)
-    with open(matching_file, 'w') as f:
-        json.dump(data, f, indent=4)
+    #TODO
     tok = time.time()
     t = time.strftime("%H:%M:%S", time.gmtime(tok - tik))
     print(f"Total time to converting checkpoints: {t}")
