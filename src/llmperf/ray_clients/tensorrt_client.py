@@ -93,7 +93,7 @@ def parse_arguments(args=None):
         action="store_true",
         help="Run several 10 iterations to profile the inference latencies.",
     )
-    parser = add_common_args(parser)
+    parser = TensorRT.add_common_args(parser)
 
     return parser.parse_args(args=args)
 
@@ -581,17 +581,17 @@ def main(args):
             not args.use_py_session
         ), "Encoder-decoder models don't have a unified python runtime, please use its own examples/enc_dec/run.py instead."
 
-    model_name, model_version = read_model_name(
+    model_name, model_version = TensorRT.read_model_name(
         args.engine_dir if not is_enc_dec else os.path.join(args.engine_dir, "encoder")
     )
 
-    if args.tokenizer_dir is None and model_name in DEFAULT_HF_MODEL_DIRS:
+    if args.tokenizer_dir is None and model_name in TensorRT.DEFAULT_HF_MODEL_DIRS:
         logger.warning(
             "tokenizer_dir is not specified. Try to infer from model_name, but this may be incorrect."
         )
-        args.tokenizer_dir = DEFAULT_HF_MODEL_DIRS[model_name]
+        args.tokenizer_dir = TensorRT.DEFAULT_HF_MODEL_DIRS[model_name]
 
-    tokenizer, pad_id, end_id = load_tokenizer(
+    tokenizer, pad_id, end_id = TensorRT.load_tokenizer(
         tokenizer_dir=args.tokenizer_dir,
         vocab_file=args.vocab_file,
         model_name=model_name,
@@ -603,8 +603,8 @@ def main(args):
         end_id = args.end_id
 
     prompt_template = None
-    if args.use_prompt_template and model_name in DEFAULT_PROMPT_TEMPLATES:
-        prompt_template = DEFAULT_PROMPT_TEMPLATES[model_name]
+    if args.use_prompt_template and model_name in TensorRT.DEFAULT_PROMPT_TEMPLATES:
+        prompt_template = TensorRT.DEFAULT_PROMPT_TEMPLATES[model_name]
 
     batch_input_ids = parse_input(
         tokenizer=tokenizer,
@@ -644,7 +644,7 @@ def main(args):
             encoder_input_features,
             encoder_output_lengths,
             decoder_input_ids,
-        ) = prepare_enc_dec_inputs(
+        ) = TensorRT.prepare_enc_dec_inputs(
             batch_input_ids, model_name, args.engine_dir, args.multimodal_input_file
         )
 
@@ -668,7 +668,7 @@ def main(args):
         else None
     )
 
-    if not args.use_py_session and not supports_inflight_batching(
+    if not args.use_py_session and not TensorRT.supports_inflight_batching(
         os.path.join(args.engine_dir, "decoder") if is_enc_dec else args.engine_dir
     ):
         logger.warning(
@@ -822,7 +822,7 @@ def main(args):
 
     # Receive output, print to screen or save to file
     if args.streaming:
-        for curr_outputs in throttle_generator(outputs, args.streaming_interval):
+        for curr_outputs in TensorRT.throttle_generator(outputs, args.streaming_interval):
             if runtime_rank == 0:
                 output_ids = curr_outputs["output_ids"]
                 sequence_lengths = curr_outputs["sequence_lengths"]

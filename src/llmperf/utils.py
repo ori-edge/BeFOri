@@ -153,6 +153,33 @@ def flatten_dict(d, parent_key="", sep="_"):
 
 
 class TensorRT:
+    DEFAULT_HF_MODEL_DIRS = {
+        'BaichuanForCausalLM': 'baichuan-inc/Baichuan-13B-Chat',
+        'BaiChuanForCausalLM': 'baichuan-inc/Baichuan-13B-Chat',
+        'BloomForCausalLM': 'bigscience/bloom-560m',
+        'GLMModel': 'THUDM/glm-10b',
+        'ChatGLMModel': 'THUDM/chatglm3-6b',
+        'ChatGLMForCausalLM': 'THUDM/chatglm3-6b',
+        'RWForCausalLM': 'tiiuae/falcon-rw-1b',
+        'FalconForCausalLM': 'tiiuae/falcon-rw-1b',
+        'GPT2LMHeadModel': 'gpt2',
+        'GPT2LMHeadCustomModel': 'gpt2',
+        'Starcoder2ForCausalLM': 'bigcode/starcoder2-3b',
+        'GPTForCausalLM': 'gpt2',
+        'GPTJForCausalLM': 'EleutherAI/gpt-j-6b',
+        'GPTNeoXForCausalLM': 'EleutherAI/gpt-neox-20b',
+        'InternLMForCausalLM': 'internlm/internlm-chat-7b',
+        'InternLM2ForCausalLM': 'internlm/internlm2-chat-7b',
+        'LlamaForCausalLM': 'meta-llama/Llama-2-7b-hf',
+        'MPTForCausalLM': 'mosaicml/mpt-7b',
+        'PhiForCausalLM': 'microsoft/phi-2',
+        'OPTForCausalLM': 'facebook/opt-350m',
+        'QWenLMHeadModel': 'Qwen/Qwen-7B',
+        'QWenForCausalLM': 'Qwen/Qwen-7B',
+        'Qwen2ForCausalLM': 'Qwen/Qwen1.5-7B',
+        'Qwen2MoeForCausalLM': 'Qwen/Qwen1.5-MoE-A2.7B',
+        'RecurrentGemmaForCausalLM': 'google/recurrentgemma-2b',
+    }
 
     INTERNLM_META_INSTRUCTION = """You are an AI assistant whose name is InternLM (书生·浦语).
     - InternLM (书生·浦语) is a conversational language model that is developed by Shanghai AI Laboratory (上海人工智能实验室). It is designed to be helpful, honest, and harmless.
