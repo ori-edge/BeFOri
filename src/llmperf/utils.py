@@ -1,12 +1,17 @@
 import json
 import math
-import pathlib
+import os
 import random
 import subprocess
 import time
+import torch
 from typing import Any, Dict, Tuple
-
-from transformers import LlamaTokenizerFast
+from pathlib import Path
+from tensorrt_llm._utils import supports_inflight_batching  # noqa
+from tensorrt_llm._utils import str_dtype_to_torch
+from tensorrt_llm.builder import get_engine_version
+from transformers import LlamaTokenizerFast, AutoTokenizer, LlamaTokenizer, T5Tokenizer
+from typing import List, Optional
 
 
 RESULTS_VERSION = "2023-08-31"
@@ -100,7 +105,7 @@ def randomly_sample_sonnet_lines_prompt(
             prompt_tokens_mean, prompt_tokens_stddev
         )
     remaining_prompt_tokens = num_prompt_tokens - get_token_length(prompt)
-    sonnet_path = pathlib.Path(__file__).parent.resolve() / "sonnet.txt"
+    sonnet_path = Path(__file__).parent.resolve() / "sonnet.txt"
     with open(sonnet_path, "r") as f:
         sonnet_lines = f.readlines()
     random.shuffle(sonnet_lines)
@@ -145,3 +150,90 @@ def flatten_dict(d, parent_key="", sep="_"):
         else:
             items.append((new_key, v))
     return dict(items)
+
+
+class TensorRT:
+
+    INTERNLM_META_INSTRUCTION = """You are an AI assistant whose name is InternLM (书生·浦语).
+    - InternLM (书生·浦语) is a conversational language model that is developed by Shanghai AI Laboratory (上海人工智能实验室). It is designed to be helpful, honest, and harmless.
+    - InternLM (书生·浦语) can understand and communicate fluently in the language chosen by the user such as English and 中文.
+    """
+
+    QWEN_PROMPT_TEMPLATE = "<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n{input_text}<|im_end|>\n<|im_start|>assistant\n"
+
+    DEFAULT_PROMPT_TEMPLATES = {
+        "InternLMForCausalLM": "<|User|>:{input_text}<eoh>\n<|Bot|>:",
+        "InternLM2ForCausalLM": "<|im_start|>system\n"
+        + INTERNLM_META_INSTRUCTION
+        + "<|im_end|>\n<|im_start|>user\n{input_text}<|im_end|>\n<|im_start|>assistant\n",
+        "QWenLMHeadModel": QWEN_PROMPT_TEMPLATE,
+        "QWenForCausalLM": QWEN_PROMPT_TEMPLATE,
+        "Qwen2ForCausalLM": QWEN_PROMPT_TEMPLATE,
+        "Qwen2MoeForCausalLM": QWEN_PROMPT_TEMPLATE,
+    }
+
+    @staticmethod
+    def read_decoder_start_token_id(engine_dir):
+        with open(Path(engine_dir) / "config.json", "r") as f:
+            config = json.load(f)
+        return config["pretrained_config"]["decoder_start_token_id"]
+
+    @staticmethod
+    def read_model_name(engine_dir: str):
+        engine_version = get_engine_version(engine_dir)
+
+        with open(Path(engine_dir) / "config.json", "r") as f:
+            config = json.load(f)
+
+        if engine_version is None:
+            return config["builder_config"]["name"], None
+
+        model_arch = config["pretrained_config"]["architecture"]
+        model_version = None
+        if "GLM" in model_arch:
+            model_version = config["pretrained_config"]["chatglm_version"]
+        if "qwen" in model_arch.lower():
+            model_version = config["pretrained_config"]["qwen_type"]
+        return model_arch, model_version
+
+    @staticmethod
+    def throttle_generator(generator, stream_interval):
+        for i, out in enumerate(generator):
+            if not i % stream_interval:
+                yield out
+
+        if i % stream_interval:
+            yield out
+
+    @staticmethod
+    def load_tokenizer(tokenizer_name_or_dir: str):
+        tokenizer = AutoTokenizer.from_pretrained(
+            pretrained_model_name_or_path=tokenizer_name_or_dir,
+            token=os.environ.get("HF_ACCESS_TOKEN"),
+        )
+        tokenizer.add_special_tokens({"pad_token": "<|reserved_special_token_0|>"})
+        tokenizer.pad_token_id = 128002
+        pad_id = tokenizer.pad_token_id
+        end_id = tokenizer.eos_token_id
+        return tokenizer, pad_id, end_id
+
+    def prepare_enc_dec_inputs(
+        self, batch_input_ids: List[torch.Tensor], engine_dir: str
+    ):
+        encoder_input_features = None
+
+        encoder_input_ids = batch_input_ids
+        decoder_start_token_id = self.read_decoder_start_token_id(
+            os.path.join(engine_dir, "decoder")
+        )
+        decoder_input_ids = [
+            torch.tensor([decoder_start_token_id], dtype=torch.int32)
+            for _ in batch_input_ids
+        ]
+        encoder_output_lengths = None
+        return (
+            encoder_input_ids,
+            encoder_input_features,
+            encoder_output_lengths,
+            decoder_input_ids,
+        )
