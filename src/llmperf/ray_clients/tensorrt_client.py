@@ -7,16 +7,10 @@ from typing import List, Optional
 
 import numpy as np
 import torch
-from llmperf.utils.TensorRT import (
-    DEFAULT_HF_MODEL_DIRS,
-    DEFAULT_PROMPT_TEMPLATES,
-    add_common_args,
-    load_tokenizer,
-    prepare_enc_dec_inputs,
-    read_model_name,
-    supports_inflight_batching,
-    throttle_generator,
-)
+from llmperf.utils.TensorRT import (DEFAULT_PROMPT_TEMPLATES,
+                   add_common_args, load_tokenizer, prepare_enc_dec_inputs,
+                   read_model_name, supports_inflight_batching,
+                   throttle_generator)
 
 import tensorrt_llm
 import tensorrt_llm.profiler
