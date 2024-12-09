@@ -1,6 +1,8 @@
 accelerate==0.30.1
 awscli==1.32.88
 boto3==1.34.88
+datasets==2.14.6
+evaluate~=0.4.1
 google-cloud-aiplatform==1.48.0
 hf_transfer==0.1.6
 litellm==1.35.18
@@ -11,13 +13,11 @@ pydantic==2.4.2
 pytest==8.1.1
 ray==2.11.0
 ray[serve]==2.11.0
+rouge_score~=0.1.2
 seaborn==0.13.2
+sentencepiece>=0.1.99
+tensorrt_llm==0.15.0.dev2024111200
 torch==2.2.2
 transformers==4.43.4
 typer==0.12.3
 wheel==0.43.0
-tensorrt_llm==0.15.0.dev2024111200
-datasets==2.14.6
-evaluate~=0.4.1
-rouge_score~=0.1.2
-sentencepiece>=0.1.99
