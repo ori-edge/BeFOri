@@ -592,7 +592,7 @@ def main(args):
         args.tokenizer_dir = TensorRT.DEFAULT_HF_MODEL_DIRS[model_name]
 
     tokenizer, pad_id, end_id = TensorRT.load_tokenizer(
-        tokenizer_dir=args.tokenizer_dir,
+        tokenizer_name_or_dir=args.tokenizer_dir,
         vocab_file=args.vocab_file,
         model_name=model_name,
         model_version=model_version,
