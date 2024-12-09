@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import time
+import transformers
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -21,6 +22,7 @@ from tensorrt_llm.quantization import QuantAlgo
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_dir", type=str, default=None)
+    parser.add_argument("--model_name", type=str, default=None)
     parser.add_argument("--meta_ckpt_dir", type=str, default=None)
 
     parser.add_argument(
@@ -538,6 +540,16 @@ def main():
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
+
+    if not os.path.exists(args.model_dir) and args.model_name is not None:
+        access_token = os.environ.get("HF_ACCESS_TOKEN")
+        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+        model_args = {
+            "pretrained_model_name_or_path": args.model_name,
+            "token": access_token,
+            "cache_dir": args.model_dir,
+        }
+        transformers.AutoModelForCausalLM.from_pretrained(**model_args)
 
     if (
         args.model_dir is None and args.meta_ckpt_dir is None
