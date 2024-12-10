@@ -35,6 +35,8 @@ def get_token_throughput_latencies(
     mean_output_tokens: int,
     stddev_output_tokens: int,
     attn_implementation: str,
+    engine_dir: str,
+    streaming_interval: int,
     additional_sampling_params: Optional[Dict[str, Any]] = None,
     num_concurrent_requests: int = 1,
     max_num_completed_requests: int = 500,
@@ -101,6 +103,8 @@ def get_token_throughput_latencies(
             sampling_params=default_sampling_params,
             llm_api=llm_api,
             attn_implementation=attn_implementation,
+            engine_dir=engine_dir,
+            streaming_interval=streaming_interval,
         )
         req_launcher.launch_requests(request_config)
         # Retrieving results less frequently allows for more concurrent requests
@@ -284,6 +288,8 @@ def run_token_benchmark(
     results_dir: str,
     user_metadata: Dict[str, Any],
     attn_implementation: str,
+    engine_dir: str,
+    streaming_interval: int,
 ):
     """
     Args:
@@ -320,6 +326,8 @@ def run_token_benchmark(
         num_concurrent_requests=num_concurrent_requests,
         additional_sampling_params=json.loads(additional_sampling_params),
         attn_implementation=attn_implementation,
+        engine_dir=engine_dir,
+        streaming_interval=streaming_interval
     )
 
     if results_dir:

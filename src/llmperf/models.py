@@ -20,3 +20,5 @@ class RequestConfig(BaseModel):
     llm_api: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     attn_implementation: Optional[str] = None
+    engine_dir: Optional[str] = None
+    streaming_interval: Optional[int] = None
