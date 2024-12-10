@@ -456,7 +456,13 @@ args.add_argument(
     default="",
     help=("path to a yaml file containing configurations for a batch of benchmarks. "),
 )
-
+args.add_argument(
+    "--streaming-interval",
+    type=int,
+    help="How often to return tokens when streaming.",
+    default=1,
+)
+args.add_argument('--engine-dir', type=str, help="Directory containing the trt engine")
 if __name__ == "__main__":
     env_vars = dict(os.environ)
     ray.init(runtime_env={"env_vars": env_vars})
@@ -490,6 +496,8 @@ if __name__ == "__main__":
                 results_dir=args.results_dir,
                 user_metadata=user_metadata,
                 attn_implementation=args.attn_implementation,
+                streaming_interval=args.streaming_interval,
+                engine_dir=args.engine_dir
             )
         )
 
