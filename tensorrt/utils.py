@@ -107,16 +107,9 @@ def throttle_generator(generator, stream_interval):
         yield out
 
 
-def load_tokenizer(
-    tokenizer_dir: Optional[str] = None,
-    vocab_file: Optional[str] = None,
-    model_name: str = "GPTForCausalLM",
-    model_version: Optional[str] = None,
-    tokenizer_type: Optional[str] = None,
-):
-    model = "meta-llama/Llama-3.1-8B-Instruct"
+def load_tokenizer(model_name: str):
     tokenizer = AutoTokenizer.from_pretrained(
-        model, token=os.environ.get("HF_ACCESS_TOKEN")
+        model_name, token=os.environ.get("HF_ACCESS_TOKEN")
     )
     tokenizer.add_special_tokens({"pad_token": "<|reserved_special_token_0|>"})
     tokenizer.pad_token_id = 128002
