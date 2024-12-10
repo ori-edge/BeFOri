@@ -34,7 +34,7 @@ class TensorRTLibClient(LLMClient):
         )
 
         if self.tokenizer is None or self.pad_id is None or self.end_id is None:
-            self.tokenizer, self.pad_id, self.end_id = TensorRT.load_tokenizer(model_name=model_name)
+            self.tokenizer, self.pad_id, self.end_id = TensorRT.load_tokenizer(tokenizer_name_or_dir=model_name)
 
         max_length = request_config.sampling_params["max_tokens"]
 
