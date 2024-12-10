@@ -29,12 +29,8 @@ class TensorRTLibClient(LLMClient):
             The request_config used to make the request. This is mainly for logging purposes.
 
         """
-        model_name, model_version = TensorRT.read_model_name(
-            request_config.engine_dir
-        )
-
         if self.tokenizer is None or self.pad_id is None or self.end_id is None:
-            self.tokenizer, self.pad_id, self.end_id = TensorRT.load_tokenizer(tokenizer_name_or_dir=model_name)
+            self.tokenizer, self.pad_id, self.end_id = TensorRT.load_tokenizer(tokenizer_name_or_dir=request_config.model)
 
         max_length = request_config.sampling_params["max_tokens"]
 
