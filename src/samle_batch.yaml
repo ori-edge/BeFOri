@@ -1,4 +1,5 @@
-- test_timeout_s: 10800
+- model: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+  test_timeout_s: 10800
   max_num_completed_requests: 10
   mean_input_tokens: 64
   stddev_input_tokens: 8
@@ -8,7 +9,8 @@
   results_dir: result_outputs
   llm_api: tensorrt
   engine_dir: /home/ubuntu/BeFOri/tensorrt/output/trt_engines/
-- test_timeout_s: 10800
+- model: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+  test_timeout_s: 10800
   max_num_completed_requests: 20
   mean_input_tokens: 64
   stddev_input_tokens: 8
@@ -18,7 +20,8 @@
   results_dir: result_outputs
   llm_api: tensorrt
   engine_dir: /home/ubuntu/BeFOri/tensorrt/output/trt_engines/
-- test_timeout_s: 10800
+- model: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+  test_timeout_s: 10800
   max_num_completed_requests: 40
   mean_input_tokens: 64
   stddev_input_tokens: 8
@@ -28,7 +31,8 @@
   results_dir: result_outputs
   llm_api: tensorrt
   engine_dir: /home/ubuntu/BeFOri/tensorrt/output/trt_engines/
-- test_timeout_s: 10800
+- model: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+  test_timeout_s: 10800
   max_num_completed_requests: 80
   mean_input_tokens: 64
   stddev_input_tokens: 8

@@ -522,6 +522,7 @@ if __name__ == "__main__":
         "results_dir": "",
         "user_metadata": user_metadata,
         "attn_implementation": "",
+        "streaming_interval": 1
     }
 
     for conf in config:
