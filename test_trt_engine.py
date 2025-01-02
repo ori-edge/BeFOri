@@ -15,7 +15,7 @@ logger = logging.getLogger("ray.serve")
 fastapi_app = FastAPI()
 
 
-@serve.deployment(num_gpus=1)
+@serve.deployment(ray_actor_options={"num_gpus": 1})
 @serve.ingress(fastapi_app)
 class TestDeployTRTEngine:
     def __init__(self, model_id: str, engine_dir: str, max_length: int):
