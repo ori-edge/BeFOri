@@ -50,7 +50,7 @@ class DeployTensorRTEngine:
         input_ids = self.tokenizer([prompt], return_tensors="pt").input_ids
         with torch.no_grad():
             self.output_ids = self.runner.generate(
-                batch_input_ids=[input_ids],
+                batch_input_ids=input_ids,
                 encoder_input_ids=None,
                 encoder_input_features=None,
                 encoder_output_lengths=None,
@@ -76,7 +76,7 @@ class DeployTensorRTEngine:
                 random_seed=0,
                 lora_uids=None,
                 prompt_table=None,
-                streaming=True,
+                streaming=False,
                 output_sequence_lengths=True,
                 no_repeat_ngram_size=None,
                 return_dict=True,
