@@ -14,6 +14,8 @@ class DeployTensorRTEngine:
         self.tokenizer, self.pad_id, self.end_id = TensorRT.load_tokenizer(
             tokenizer_name_or_dir=model_id
         )
+        self.tokenizer.add_special_tokens({"pad_token": "<|reserved_special_token_0|>"})
+        self.tokenizer.pad_token_id = 128002
         runner_cls = ModelRunner
         runtime_rank = tensorrt_llm.mpi_rank()
         runner_kwargs = dict(
@@ -71,7 +73,7 @@ class DeployTensorRTEngine:
             torch.cuda.synchronize()
         for curr_outputs in self.throttle_generator(outputs, 1):
             if self.runtime_rank == 0:
-                output_ids = curr_outputs['output_ids']
+                output_ids = curr_outputs['output_ids'][0][0]
                 output_text = self.tokenizer.decode(output_ids)
                 breakpoint()
         return output_text
