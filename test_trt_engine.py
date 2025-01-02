@@ -12,11 +12,7 @@ from tensorrt_llm.runtime import PYTHON_BINDINGS, ModelRunner
 
 logger = logging.getLogger("ray.serve")
 
-fastapi_app = FastAPI()
 
-
-@serve.deployment
-@serve.ingress(fastapi_app)
 class DeployTensorRTEngine:
     def __init__(self, model_id: str, engine_dir: str, max_length: int):
         self.loop = asyncio.get_running_loop()
@@ -40,7 +36,6 @@ class DeployTensorRTEngine:
         self.runtime_rank = tensorrt_llm.mpi_rank()
         self.output_ids = []
 
-    @fastapi_app.post("/")
     def handle_request(self, prompt: str, max_length: int):
         logger.info(f'Got prompt: "{prompt}"')
         self.loop.run_in_executor(None, self.generate_text, prompt, max_length)
@@ -86,23 +81,23 @@ class DeployTensorRTEngine:
             )
             torch.cuda.synchronize()
 
-    async def consume_streamer(self, streaming_interval):
+    def consume_streamer(self, streaming_interval):
         while True:
-            try:
-                for curr_outputs in self.output_ids:
-                    print(
-                        f"Consuming streamer, found current outputs: \n{curr_outputs}"
-                    )
-                    if self.runtime_rank == 0:
-                        _output_ids = curr_outputs["output_ids"]
-                        for _id in _output_ids:
-                            yield _id
-                break
-            except Empty:
-                # The streamer raises an Empty exception if the next token
-                # hasn't been generated yet. `await` here to yield control
-                # back to the event loop so other coroutines can run.
-                await asyncio.sleep(0.001)
+            for curr_outputs in self.output_ids:
+                print(
+                    f"Consuming streamer, found current outputs: \n{curr_outputs}"
+                )
+                if self.runtime_rank == 0:
+                    _output_ids = curr_outputs["output_ids"]
+                    for _id in _output_ids:
+                        yield _id
 
-
-app = DeployTensorRTEngine.bind("meta-llama/Meta-Llama-3.1-8B-Instruct", "/home/ubuntu/BeFOri/tensorrt/output/trt_engines/", 152)
+if __name__ == "__main__":
+    max_length = 152
+    prompt = "Why is this so hard?"
+    TRT = DeployTensorRTEngine(model_id="meta-llama/Meta-Llama-3.1-8B-Instruct",
+                               engine_dir="/home/ubuntu/BeFOri/tensorrt/output/trt_engines/",
+                               max_length=max_length)
+    output_ids = TRT.handle_request(prompt=prompt, max_length=max_length)
+    breakpoint()
+    print(output_ids)
