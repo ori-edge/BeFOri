@@ -1,13 +1,8 @@
-import asyncio
 import logging
 import tensorrt_llm
 import torch
 
-
-from fastapi import FastAPI
 from llmperf.utils import TensorRT
-from queue import Empty
-from ray import serve
 from tensorrt_llm.runtime import PYTHON_BINDINGS, ModelRunner
 
 logger = logging.getLogger("ray.serve")
@@ -36,7 +31,7 @@ class DeployTensorRTEngine:
 
     def handle_request(self, prompt: str, max_length: int):
         logger.info(f'Got prompt: "{prompt}"')
-        self.loop.run_in_executor(None, self.generate_text, prompt, max_length)
+        self.generate_text(prompt=prompt, max_length=max_length)
         return self.output_ids
 
     def generate_text(self, prompt: str, max_length: int):
