@@ -15,8 +15,6 @@ logger = logging.getLogger("ray.serve")
 
 class DeployTensorRTEngine:
     def __init__(self, model_id: str, engine_dir: str, max_length: int):
-        self.loop = asyncio.get_running_loop()
-
         self.model_id = model_id
         self.tokenizer, self.pad_id, self.end_id = TensorRT.load_tokenizer(
             tokenizer_name_or_dir=model_id
