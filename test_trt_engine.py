@@ -15,7 +15,7 @@ logger = logging.getLogger("ray.serve")
 fastapi_app = FastAPI()
 
 
-@serve.deployment
+@serve.deployment(num_gpus=1)
 @serve.ingress(fastapi_app)
 class TestDeployTRTEngine:
     def __init__(self, model_id: str, engine_dir: str, max_length: int):
@@ -87,7 +87,6 @@ class TestDeployTRTEngine:
                 num_output_sents, num_beams, _ = output_ids.size()
                 output_ids = output_ids[0][0]
                 output_text = self.tokenizer.decode(output_ids)
-                breakpoint()
         return output_text
 
     @staticmethod
