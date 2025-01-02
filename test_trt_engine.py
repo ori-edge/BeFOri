@@ -69,12 +69,21 @@ class DeployTensorRTEngine:
                 input_token_extra_ids=None,
             )
             torch.cuda.synchronize()
-        text = None
-        if self.runtime_rank == 0:
-            output_ids = outputs['output_ids']
-            breakpoint()
-            # text = self.tokenizer.decode(outputs)
-        return text
+        for curr_outputs in self.throttle_generator(outputs, 1):
+            if self.runtime_rank == 0:
+                output_ids = curr_outputs['output_ids']
+                output_text = self.tokenizer.decode(output_ids)
+                breakpoint()
+        return output_text
+
+    @staticmethod
+    def throttle_generator(generator, stream_interval):
+        for i, out in enumerate(generator):
+            if not i % stream_interval:
+                yield out
+
+        if i % stream_interval:
+            yield out
 
 if __name__ == "__main__":
     max_length = 152
