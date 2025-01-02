@@ -31,13 +31,9 @@ class DeployTensorRTEngine:
 
     def handle_request(self, prompt: str, max_length: int):
         logger.info(f'Got prompt: "{prompt}"')
-        self.generate_text(prompt=prompt, max_length=max_length)
-        return self.output_ids
-
-    def generate_text(self, prompt: str, max_length: int):
         input_ids = self.tokenizer([prompt], return_tensors="pt").input_ids
         with torch.no_grad():
-            self.output_ids = self.runner.generate(
+            outputs = self.runner.generate(
                 batch_input_ids=input_ids,
                 encoder_input_ids=None,
                 encoder_input_features=None,
@@ -73,17 +69,12 @@ class DeployTensorRTEngine:
                 input_token_extra_ids=None,
             )
             torch.cuda.synchronize()
-
-    def consume_streamer(self, streaming_interval):
-        while True:
-            for curr_outputs in self.output_ids:
-                print(
-                    f"Consuming streamer, found current outputs: \n{curr_outputs}"
-                )
-                if self.runtime_rank == 0:
-                    _output_ids = curr_outputs["output_ids"]
-                    for _id in _output_ids:
-                        yield _id
+        text = None
+        if self.runtime_rank == 0:
+            output_ids = outputs['output_ids']
+            breakpoint()
+            # text = self.tokenizer.decode(outputs)
+        return text
 
 if __name__ == "__main__":
     max_length = 152
@@ -91,6 +82,6 @@ if __name__ == "__main__":
     TRT = DeployTensorRTEngine(model_id="meta-llama/Meta-Llama-3.1-8B-Instruct",
                                engine_dir="/home/ubuntu/BeFOri/tensorrt/output/trt_engines/",
                                max_length=max_length)
-    output_ids = TRT.handle_request(prompt=prompt, max_length=max_length)
+    output_text = TRT.handle_request(prompt=prompt, max_length=max_length)
     breakpoint()
-    print(output_ids)
+    print(output_text)
