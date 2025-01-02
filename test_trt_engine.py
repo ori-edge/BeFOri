@@ -1,14 +1,23 @@
+import asyncio
 import logging
 import tensorrt_llm
 import torch
 
+
+from fastapi import FastAPI
 from llmperf.utils import TensorRT
+from queue import Empty
+from ray import serve
 from tensorrt_llm.runtime import PYTHON_BINDINGS, ModelRunner
 
 logger = logging.getLogger("ray.serve")
 
+fastapi_app = FastAPI()
 
-class DeployTensorRTEngine:
+
+@serve.deployment
+@serve.ingress(fastapi_app)
+class TestDeployTRTEngine:
     def __init__(self, model_id: str, engine_dir: str, max_length: int):
         self.model_id = model_id
         self.tokenizer, self.pad_id, self.end_id = TensorRT.load_tokenizer(
@@ -31,6 +40,7 @@ class DeployTensorRTEngine:
         self.runtime_rank = tensorrt_llm.mpi_rank()
         self.output_ids = []
 
+    @fastapi_app.post("/")
     def handle_request(self, prompt: str, max_length: int):
         logger.info(f'Got prompt: "{prompt}"')
         input_ids = self.tokenizer([prompt], return_tensors="pt").input_ids
@@ -73,7 +83,9 @@ class DeployTensorRTEngine:
             torch.cuda.synchronize()
         for curr_outputs in self.throttle_generator(outputs, 1):
             if self.runtime_rank == 0:
-                output_ids = curr_outputs['output_ids'][0][0]
+                output_ids = curr_outputs['output_ids']
+                num_output_sents, num_beams, _ = output_ids.size()
+                output_ids = output_ids[0][0]
                 output_text = self.tokenizer.decode(output_ids)
                 breakpoint()
         return output_text
@@ -87,12 +99,6 @@ class DeployTensorRTEngine:
         if i % stream_interval:
             yield out
 
-if __name__ == "__main__":
-    max_length = 152
-    prompt = "Why is this so hard?"
-    TRT = DeployTensorRTEngine(model_id="meta-llama/Meta-Llama-3.1-8B-Instruct",
-                               engine_dir="/home/ubuntu/BeFOri/tensorrt/output/trt_engines/",
-                               max_length=max_length)
-    output_text = TRT.handle_request(prompt=prompt, max_length=max_length)
-    breakpoint()
-    print(output_text)
+
+app = TestDeployTRTEngine.bind("meta-llama/Meta-Llama-3.1-8B-Instruct", "/home/ubuntu/BeFOri/tensorrt/output/trt_engines/", 152)
+
