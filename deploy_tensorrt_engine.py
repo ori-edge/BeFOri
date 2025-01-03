@@ -50,12 +50,12 @@ class DeployTRTEngine:
         return {"task_id": task_id}
 
     def generate_text(self, prompts: List[Dict[str, str]]):
-        prompt_list = [d.values() for d in prompts]
+        prompt_list = [prompts[t_id] for t_id in prompts]
         raw_outputs = self.model.generate(prompt_list)
 
         for _output in raw_outputs:
-            _task_id = next(iter(prompts))
-            input_prompt = prompts.pop(_task_id)
+            prompt_dict = prompts.pop(0)
+            _task_id, input_prompt = next(iter(prompt_dict.items()))
             self.outputs[_task_id] = {
                 "prompt": input_prompt,
                 "text": _output.output[0].text,
