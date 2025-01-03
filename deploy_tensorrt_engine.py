@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, HTTPException
 from ray import serve
 from typing import List, Dict
+import json
 import uuid
 import time
 import threading
@@ -37,25 +38,26 @@ class DeployTRTEngine:
 
         # If we have the desired number of concurrent requests or 2 seconds have passed then start generating
         if queue_len >= ccr or time.time() - self.timer > 2:
-            prompts = []
+            prompts_dict = {}
             # make a dictionary of prompts that contain the desired number of concurrent requests or less
-            while len(prompts) < min(ccr, queue_len):
+            while len(prompts_dict) < min(ccr, queue_len):
                 _task_id = next(iter(self.queue))
                 _prompt = self.queue.pop(_task_id)
-                prompts.append({_task_id: prompt})
+                prompts_dict[_task_id]: prompt
                 self.statuses[_task_id] = "in progress"
-
+            prompts = json.dumps(prompts_dict)
             # Start a background thread to process the task
             threading.Thread(target=self.generate_text, args=prompts).start()
         return {"task_id": task_id}
 
-    def generate_text(self, prompts: List[Dict[str, str]]):
-        prompt_list = [list(d.values())[0] for d in prompts]
+    def generate_text(self, prompts: str):
+        prompt_dict = json.loads(prompts)
+        prompt_list = list(prompt_dict.values())
         raw_outputs = self.model.generate(prompt_list)
 
         for _output in raw_outputs:
-            prompt_dict = prompts.pop(0)
             _task_id, input_prompt = next(iter(prompt_dict.items()))
+            prompt_dict.pop(_task_id)
             self.outputs[_task_id] = {
                 "prompt": input_prompt,
                 "text": _output.output[0].text,
