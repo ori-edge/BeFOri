@@ -43,11 +43,11 @@ class DeployTRTEngine:
             while len(prompts_dict) < min(ccr, queue_len):
                 _task_id = next(iter(self.queue))
                 _prompt = self.queue.pop(_task_id)
-                prompts_dict[_task_id]: prompt
+                prompts_dict[_task_id] = prompt
                 self.statuses[_task_id] = "in progress"
             prompts = json.dumps(prompts_dict)
             # Start a background thread to process the task
-            threading.Thread(target=self.generate_text, args=prompts).start()
+            threading.Thread(target=self.generate_text, args={"prompts": prompts}).start()
         return {"task_id": task_id}
 
     def generate_text(self, prompts: str):
