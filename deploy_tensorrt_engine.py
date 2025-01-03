@@ -17,15 +17,19 @@ fastapi_app = FastAPI()
 @serve.deployment(ray_actor_options={"num_gpus": 1})
 @serve.ingress(fastapi_app)
 class DeployTRTEngine:
-    def __init__(self, model_id: str):
+    def __init__(self, model_id: str, ccr: int, batch_time=1.0):
         self.model = LLM(model=model_id)
+
         self.queue = {}
         self.statuses = {}
         self.outputs = {}
+
+        self.ccr = ccr
+        self.batch_time = batch_time
         self.timer = 0
 
     @fastapi_app.post("/")
-    def handle_request(self, prompt: str, ccr: int, batch_time=1.0):
+    def handle_request(self, prompt: str):
         # If the queue is empty then (re)start the timer
         queue_len = len(self.queue)
         if queue_len == 0:
@@ -38,12 +42,13 @@ class DeployTRTEngine:
         self.statuses[task_id] = "in queue"
 
         # If we have the desired number of concurrent requests or 2 seconds have passed then start generating
-        if queue_len >= ccr or time.time() - self.timer > batch_time:
+        if queue_len >= self.ccr or time.time() - self.timer > self.batch_time:
             # make a dictionary of prompts that contain the desired number of concurrent requests or less
-            prompts_dict = dict(islice(self.queue.items(), min(ccr, queue_len)))
+            prompt_len = min(self.ccr, queue_len)
+            prompts_dict = dict(islice(self.queue.items(), prompt_len))
 
             # remove them from the queue
-            self.queue = dict(islice(self.queue.items(), min(ccr, queue_len), None))
+            self.queue = dict(islice(self.queue.items(), prompt_len, None))
 
             # update statuses
             self.statuses = {
@@ -86,4 +91,4 @@ class DeployTRTEngine:
         return ret
 
 
-app = DeployTRTEngine.bind("meta-llama/Meta-Llama-3.1-8B-Instruct", 2.0)
+app = DeployTRTEngine.bind("meta-llama/Meta-Llama-3.1-8B-Instruct", 2, 2.0)
