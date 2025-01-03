@@ -21,11 +21,11 @@ class DeployTRTEngine:
         self.model = LLM(model=model_id)
         self.queue = {}
         self.statuses = {}
-        self.outputs = []
+        self.outputs = {}
         self.timer = 0
 
     @fastapi_app.post("/")
-    def handle_request(self, prompt: str, ccr: int):
+    def handle_request(self, prompt: str, ccr: int, batch_time=1.0):
         # If the queue is empty then (re)start the timer
         queue_len = len(self.queue)
         if queue_len == 0:
@@ -38,7 +38,7 @@ class DeployTRTEngine:
         self.statuses[task_id] = "in queue"
 
         # If we have the desired number of concurrent requests or 2 seconds have passed then start generating
-        if queue_len >= ccr or time.time() - self.timer > 2:
+        if queue_len >= ccr or time.time() - self.timer > batch_time:
             # make a dictionary of prompts that contain the desired number of concurrent requests or less
             prompts_dict = dict(islice(self.queue.items(), min(ccr, queue_len)))
 
@@ -75,14 +75,15 @@ class DeployTRTEngine:
     def get_response(self, task_id: str):
         # Get the status of the task, if the task id is not found raise an error
         try:
-            status = self.statuses.pop(task_id)
+            status = self.statuses[task_id]
         except KeyError:
             raise HTTPException(status_code=404, detail="Task ID not found")
 
         if status in ["in queue", "in progress"]:
             raise HTTPException(status_code=202, detail=f"Task is {status}.")
         ret = self.outputs.pop(task_id)
+        self.statuses.pop(task_id)
         return ret
 
 
-app = DeployTRTEngine.bind("meta-llama/Meta-Llama-3.1-8B-Instruct")
+app = DeployTRTEngine.bind("meta-llama/Meta-Llama-3.1-8B-Instruct", 2.0)
