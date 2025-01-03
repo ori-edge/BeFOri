@@ -2,7 +2,8 @@ from tensorrt_llm import LLM, SamplingParams
 import logging
 from fastapi import FastAPI, HTTPException
 from ray import serve
-from typing import List, Dict
+from itertools import islice
+from typing import Dict
 import json
 import uuid
 import time
@@ -38,26 +39,26 @@ class DeployTRTEngine:
 
         # If we have the desired number of concurrent requests or 2 seconds have passed then start generating
         if queue_len >= ccr or time.time() - self.timer > 2:
-            prompts_dict = {}
             # make a dictionary of prompts that contain the desired number of concurrent requests or less
-            while len(prompts_dict) < min(ccr, queue_len):
-                _task_id = next(iter(self.queue))
-                _prompt = self.queue.pop(_task_id)
-                prompts_dict[_task_id] = prompt
-                self.statuses[_task_id] = "in progress"
-            prompts = json.dumps(prompts_dict)
+            prompts_dict = dict(islice(self.queue.items(), min(ccr, queue_len)))
+
+            # remove them from the queue
+            self.queue = dict(islice(self.queue.items(), min(ccr, queue_len), None))
+
+            # update statuses
+            self.statuses = {key: ("in progress" if key in prompts_dict else value) for key, value in self.statuses}
+
             # Start a background thread to process the task
-            threading.Thread(target=self.generate_text, args={"prompts": prompts}).start()
+            threading.Thread(target=self.generate_text, kwargs={"prompts": prompts_dict}).start()
         return {"task_id": task_id}
 
-    def generate_text(self, prompts: str):
-        prompt_dict = json.loads(prompts)
-        prompt_list = list(prompt_dict.values())
+    def generate_text(self, prompts: Dict[str, str]):
+        prompt_list = list(prompts.values())
         raw_outputs = self.model.generate(prompt_list)
 
         for _output in raw_outputs:
-            _task_id, input_prompt = next(iter(prompt_dict.items()))
-            prompt_dict.pop(_task_id)
+            _task_id, input_prompt = next(iter(prompts.items()))
+            prompts.pop(_task_id)
             self.outputs[_task_id] = {
                 "prompt": input_prompt,
                 "text": _output.output[0].text,
