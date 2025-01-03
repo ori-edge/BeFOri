@@ -55,14 +55,14 @@ class DeployTRTEngine:
     def generate_text(self, prompts: Dict[str, str]):
         prompt_list = list(prompts.values())
         raw_outputs = self.model.generate(prompt_list)
-
+        
         for _output in raw_outputs:
             _task_id, input_prompt = next(iter(prompts.items()))
             prompts.pop(_task_id)
             self.outputs[_task_id] = {
                 "prompt": input_prompt,
-                "text": _output.output[0].text,
-                "token_len": len(_output.output[0].token_ids),
+                "text": _output.outputs[0].text,
+                "token_len": len(_output.outputs[0].token_ids),
             }
             self.statuses[_task_id] = "complete"
 
