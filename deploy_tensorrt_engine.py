@@ -2,7 +2,7 @@ from tensorrt_llm import LLM, SamplingParams
 import logging
 from fastapi import FastAPI, HTTPException
 from ray import serve
-from typing import List, Dict, Any
+from typing import List, Dict
 import uuid
 import time
 import threading
@@ -50,7 +50,7 @@ class DeployTRTEngine:
         return {"task_id": task_id}
 
     def generate_text(self, prompts: List[Dict[str, str]]):
-        prompt_list = [prompts[t_id] for t_id in prompts]
+        prompt_list = [list(d.values())[0] for d in prompts]
         raw_outputs = self.model.generate(prompt_list)
 
         for _output in raw_outputs:
