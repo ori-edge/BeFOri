@@ -37,20 +37,20 @@ class DeployTRTEngine:
 
         # If we have the desired number of concurrent requests or 2 seconds have passed then start generating
         if queue_len >= ccr or time.time() - self.timer > 2:
-            prompts = {}
+            prompts = []
             # make a dictionary of prompts that contain the desired number of concurrent requests or less
             while len(prompts) < min(ccr, queue_len):
                 _task_id = next(iter(self.queue))
                 _prompt = self.queue.pop(_task_id)
-                prompts[_task_id] = _prompt
+                prompts.append({_task_id: prompt})
                 self.statuses[_task_id] = "in progress"
 
             # Start a background thread to process the task
             threading.Thread(target=self.generate_text, args=prompts).start()
         return {"task_id": task_id}
 
-    def generate_text(self, prompts: Dict[str, str]):
-        prompt_list = list(prompts.values())
+    def generate_text(self, prompts: List[Dict[str, str]]):
+        prompt_list = [d.values() for d in prompts]
         raw_outputs = self.model.generate(prompt_list)
 
         for _output in raw_outputs:
