@@ -46,16 +46,21 @@ class DeployTRTEngine:
             self.queue = dict(islice(self.queue.items(), min(ccr, queue_len), None))
 
             # update statuses
-            self.statuses = {key: ("in progress" if key in prompts_dict else value) for key, value in self.statuses}
+            self.statuses = {
+                key: ("in progress" if key in prompts_dict else value)
+                for key, value in self.statuses.items()
+            }
 
             # Start a background thread to process the task
-            threading.Thread(target=self.generate_text, kwargs={"prompts": prompts_dict}).start()
+            threading.Thread(
+                target=self.generate_text, kwargs={"prompts": prompts_dict}
+            ).start()
         return {"task_id": task_id}
 
     def generate_text(self, prompts: Dict[str, str]):
         prompt_list = list(prompts.values())
         raw_outputs = self.model.generate(prompt_list)
-        
+
         for _output in raw_outputs:
             _task_id, input_prompt = next(iter(prompts.items()))
             prompts.pop(_task_id)
